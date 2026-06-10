@@ -4,8 +4,19 @@ import { PlusOutlined, EditOutlined } from '@ant-design/icons'
 import { productApi } from '../services/api'
 import { useAuthStore } from '../store'
 
-const PRODUCT_TYPES = ['车险', '健康险', '寿险', '意外险', '财产险', '责任险', '农业险']
-const TYPE_COLORS = { '车险': 'blue', '健康险': 'green', '寿险': 'purple', '意外险': 'orange', '财产险': 'cyan', '责任险': 'magenta', '农业险': 'lime' }
+const PRODUCT_TYPES = ['赠险', '终寿', '健康', '保障计划', '年金', '两全', '护理', '团险', '失能', '豁免']
+const TYPE_COLORS = {
+  '赠险': 'blue',
+  '终寿': 'purple',
+  '健康': 'green',
+  '保障计划': 'cyan',
+  '年金': 'orange',
+  '两全': 'magenta',
+  '护理': 'lime',
+  '团险': 'gold',
+  '失能': 'red',
+  '豁免': 'geekblue'
+}
 
 export default function ProductsPage() {
   const { user } = useAuthStore()
@@ -104,7 +115,7 @@ export default function ProductsPage() {
       <Modal title={editing ? '编辑产品' : '新建保险产品'} open={showModal} onCancel={() => { setShowModal(false); form.resetFields() }} footer={null}>
         <Form form={form} layout="vertical" onFinish={handleSave} style={{ marginTop: 16 }}>
           <Form.Item name="name" label="产品名称" rules={[{ required: true }]}>
-            <Input placeholder="如：平安车险 2024" />
+            <Input placeholder="如：太保鑫相伴(2025)终身寿险" />
           </Form.Item>
           <Form.Item name="type" label="产品类型" rules={[{ required: true }]}>
             <Select>{PRODUCT_TYPES.map(t => <Select.Option key={t} value={t}>{t}</Select.Option>)}</Select>
