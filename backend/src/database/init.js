@@ -95,7 +95,16 @@ async function initDatabase() {
     title TEXT NOT NULL,
     severity TEXT NOT NULL CHECK(severity IN ('high','medium','low')),
     biz_type TEXT NOT NULL,
-    defect_type TEXT NOT NULL CHECK(defect_type IN ('logic','environment','business_req','legacy')),
+    defect_type TEXT NOT NULL CHECK(defect_type IN ('system','environment','legacy','requirement','case')),
+    defect_level TEXT,
+    biz_domain TEXT,
+    root_cause TEXT,
+    func_module TEXT,
+    insurance_product TEXT,
+    product_type TEXT,
+    test_system TEXT,
+    scenario TEXT,
+    tester TEXT,
     description TEXT,
     biz_tags TEXT DEFAULT '[]',
     fix_summary TEXT,
@@ -135,6 +144,7 @@ async function initDatabase() {
     check_points TEXT DEFAULT '[]',
     status TEXT DEFAULT 'pending',
     upload_filename TEXT,
+    feedback TEXT CHECK(feedback IN ('hit','false_alarm','missed','none')) DEFAULT 'none',
     created_by INTEGER,
     created_at TEXT DEFAULT (datetime('now','localtime'))
   )`)
@@ -293,11 +303,44 @@ function seedDefectDB(db) {
   const exist = db.prepare('SELECT COUNT(*) as count FROM defect_db').get()
   if (exist && exist.count > 0) return
 
-  const defects = generateDefectDB()
+  let defects = []
+  try {
+    const XLSX = require('xlsx')
+    const excelPath = 'D:/缺陷预警系统架构说明/2025年缺陷案例缺陷库基表.xlsx'
+    const fs = require('fs')
+    if (fs.existsSync(excelPath)) {
+      const workbook = XLSX.readFile(excelPath)
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+      // Skip headers (rows 0 and 1)
+      const dataRows = rows.slice(2)
+      const { parseRealDefects } = require('../data/bizTemplates')
+      defects = parseRealDefects(dataRows)
+      console.log(`📊 成功从 Excel 解析了 ${defects.length} 条真实缺陷数据`)
+    } else {
+      console.warn(`⚠️ 未找到真实缺陷数据 Excel 文件：${excelPath}，使用模拟数据 fallback`)
+      defects = generateDefectDB()
+    }
+  } catch (err) {
+    console.error('❌ 解析 Excel 失败，使用模拟数据 fallback:', err)
+    defects = generateDefectDB()
+  }
+
   const insert = db.prepare(
-    `INSERT INTO defect_db (defect_id,title,severity,biz_type,defect_type,description,biz_tags,fix_summary,responsible_system,status,created_month)
-     VALUES (@defect_id,@title,@severity,@biz_type,@defect_type,@description,@biz_tags,@fix_summary,@responsible_system,@status,@created_month)`
+    `INSERT INTO defect_db (
+      defect_id, title, severity, biz_type, defect_type, 
+      defect_level, biz_domain, root_cause, func_module, 
+      insurance_product, product_type, test_system, scenario, tester,
+      description, biz_tags, fix_summary, responsible_system, status, created_month
+    ) VALUES (
+      @defect_id, @title, @severity, @biz_type, @defect_type, 
+      @defect_level, @biz_domain, @root_cause, @func_module, 
+      @insurance_product, @product_type, @test_system, @scenario, @tester,
+      @description, @biz_tags, @fix_summary, @responsible_system, @status, @created_month
+    )`
   )
+
   for (const d of defects) {
     insert.run(d)
   }

@@ -250,19 +250,24 @@ function buildCheckPoints(bizTypes, defects, score) {
     points.push('执行前请详细阅读关联历史缺陷的修复方案')
   }
 
-  if (bizTypes.some(b => b.bizType === 'claims' || b.bizType === 'death_claim')) {
-    points.push('重点验证金额计算精度（建议精确到分）')
-    points.push('确认受益人信息处理逻辑是否符合条款规定')
+  if (bizTypes.some(b => b.bizType === 'claims')) {
+    points.push('重点验证理赔金额计算精度与赔付限额')
+    points.push('确认受益人信息及理赔资料核验逻辑是否符合条款规定')
   }
 
-  if (bizTypes.some(b => b.bizType === 'underwriting')) {
-    points.push('重点验证核保规则是否在边界条件下生效')
-    points.push('检查健康告知问卷必填项拦截逻辑')
+  if (bizTypes.some(b => b.bizType === 'underwriting' || b.bizType === 'underwritingReview')) {
+    points.push('重点验证投保人资格校验及核保规则拦截逻辑')
+    points.push('检查健康告知问卷必填项及误告处理流程')
   }
 
-  if (bizTypes.some(b => b.bizType === 'policy_loan')) {
-    points.push('重点验证贷款金额上限（现金价值80%）校验')
-    points.push('检查利息计算精度，避免浮点误差')
+  if (bizTypes.some(b => b.bizType === 'policyService')) {
+    points.push('重点验证减保、退保及保单贷款的额度和现金价值校验')
+    points.push('检查保单信息变更及资金流转接口的准确性')
+  }
+
+  if (bizTypes.some(b => b.bizType === 'systemBatch')) {
+    points.push('重点验证批量作业、定时任务及配置参数正确性')
+    points.push('检查跨系统数据同步及接口调用的异常处理与重试机制')
   }
 
   // 基于历史缺陷生成专项建议

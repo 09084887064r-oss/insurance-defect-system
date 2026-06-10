@@ -324,10 +324,10 @@ export default function AnalyticsDashboard() {
               <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--text-secondary)' }}>📖 展开指标说明</summary>
               <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {[
-                  ['逻辑系统缺陷', '核心业务逻辑代码中的缺陷，如金额计算错误、规则不生效等'],
-                  ['环境阻断缺陷', '因测试环境配置、接口超时等非业务原因导致测试阻塞的缺陷'],
-                  ['业务需求缺陷', '因需求不清晰或需求变更导致实现与预期不符的缺陷'],
-                  ['系统遗留缺陷', '上个版本已记录但尚未修复、在本次UAT中仍待验证的缺陷'],
+                  ['系统问题', '系统功能或业务逻辑相关的缺陷，如金额计算、规则处理等'],
+                  ['环境问题', '测试环境、接口配置等原因导致测试阻塞的缺陷'],
+                  ['严重缺陷', '级别为严重或致命的高危缺陷'],
+                  ['遗留问题', '历史遗留且在本次UAT测试中仍待验证的缺陷'],
                 ].map(([t, d]) => (
                   <div key={t}>
                     <b style={{ color: 'var(--text-primary)' }}>{t}：</b>{d}

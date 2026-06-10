@@ -188,6 +188,20 @@ export default function CaseAnalysisPage() {
       )
     },
     {
+      title: '反馈状态', dataIndex: 'feedback', width: 100, align: 'center',
+      render: feedback => {
+        if (!feedback || feedback === 'none') {
+          return <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>未反馈</span>
+        }
+        const config = {
+          hit: { label: '🎯 命中', color: 'success' },
+          false_alarm: { label: '⚠️ 误报', color: 'warning' },
+          missed: { label: '❌ 漏报', color: 'error' }
+        }[feedback] || { label: '未知', color: 'default' }
+        return <Tag color={config.color} style={{ margin: 0, fontWeight: 500 }}>{config.label}</Tag>
+      }
+    },
+    {
       title: '操作', width: 72,
       render: (_, r) => (
         <Button size="small" type="link" onClick={() => { setSelectedCase(r); setDrawerOpen(true) }}>
@@ -204,7 +218,7 @@ export default function CaseAnalysisPage() {
         <div>
           <h1 className="page-title">🎯 测试案例智能分析</h1>
           <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-            基于规则引擎 · 历史缺陷库 480 条 · 风险自动排序
+            基于规则引擎 · 历史缺陷库 328 条 · 风险自动排序
           </div>
         </div>
         {results.length > 0 && (
@@ -398,6 +412,46 @@ export default function CaseAnalysisPage() {
             <Card size="small" title="🧠 AI 评分依据">
               <div style={{ color: 'var(--text-secondary)', lineHeight: 1.8, fontSize: 13 }}>
                 {selectedCase.reason}
+              </div>
+            </Card>
+
+            {/* 预警反馈 */}
+            <Card size="small" title="🎯 预警反馈">
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>准确性反馈：</span>
+                {[
+                  { value: 'hit', label: '🎯 命中', color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+                  { value: 'false_alarm', label: '⚠️ 误报', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+                  { value: 'missed', label: '❌ 漏报', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+                ].map(btn => {
+                  const active = (selectedCase.feedback || 'none') === btn.value
+                  return (
+                    <Button
+                      key={btn.value}
+                      size="small"
+                      style={{
+                        borderColor: active ? btn.color : 'var(--border)',
+                        background: active ? btn.bg : 'transparent',
+                        color: active ? btn.color : 'var(--text-secondary)',
+                        fontWeight: active ? 600 : 400
+                      }}
+                      onClick={async () => {
+                        try {
+                          await API.post(`/api/v1/cases/${selectedCase.id}/feedback`, { feedback: btn.value })
+                          message.success('反馈提交成功')
+                          // 更新本地列表状态
+                          const updated = results.map(r => r.id === selectedCase.id ? { ...r, feedback: btn.value } : r)
+                          setResults(updated)
+                          setSelectedCase({ ...selectedCase, feedback: btn.value })
+                        } catch (e) {
+                          message.error('提交反馈失败：' + (e.response?.data?.message || e.message))
+                        }
+                      }}
+                    >
+                      {btn.label}
+                    </Button>
+                  )
+                })}
               </div>
             </Card>
 

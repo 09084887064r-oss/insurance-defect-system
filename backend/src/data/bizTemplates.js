@@ -1,204 +1,212 @@
 /**
- * 8类保险业务类型模板
- * 包含：关键词词典、默认风险权重、风险词汇
+ * bizTemplates.js  V1.1
+ * 基于2025年真实缺陷库基表更新：5大业务域 + 具体场景关键词
+ * 业务域来源：承保测试(37) / 保全测试(169) / 核保测试(89) / 理赔测试(21) / P17(12)
  */
+
 const BIZ_TEMPLATES = [
   {
-    bizType: 'claim_reduction',
-    label: '减保',
-    icon: '📉',
-    color: '#f59e0b',
+    bizType: 'underwriting',         // 承保测试
+    label: '承保测试',
+    icon: '📋',
+    color: '#6366f1',
     defaultRiskWeight: 0.85,
-    keywords: ['减保', '减额', '减少保额', '保额减少', '减少保险金额', '部分退保', '保险金额调整', '减保申请', '减额缴清'],
-    riskWords: ['超限', '金额错误', '未校验', '允许通过', '系统放行', '核心系统', '数据库'],
-    description: '涉及保险金额减少、部分退保等操作'
+    description: '保险产品录单、承保规则验证，含被保险人资格校验',
+    keywords: ['投保', '录单', '承保', '被保险人', '投保人', '保单', '险种', '份数', '保额', '保费', '生效', '核实', '资格', '年龄', '关系'],
+    riskWords: ['未成年', '违规', '不允许', '超过', '错误', '失败', '不一致', '未拦截', '绕过', '异常']
   },
   {
-    bizType: 'claims',
-    label: '理赔',
+    bizType: 'policyService',        // 保全测试
+    label: '保全测试',
+    icon: '🔄',
+    color: '#0891b2',
+    defaultRiskWeight: 0.9,
+    description: '退保、减保、贷款、变更等保单保全业务测试',
+    keywords: ['退保', '减保', '保全', '变更', '贷款', '复效', '犹豫期', '撤保', '受益人', '投保人变更', '现金价值', '红利', '分红', '生存金', '批单'],
+    riskWords: ['金额错误', '计算错误', '不符', '超限', '未解决', '失败', '查询失败', '提示错误', '比例错误', '规则错误']
+  },
+  {
+    bizType: 'underwritingReview',   // 核保测试
+    label: '核保测试',
+    icon: '🔍',
+    color: '#7c3aed',
+    defaultRiskWeight: 0.88,
+    description: '人工核保、体况告知、性别年龄误告等核保流程测试',
+    keywords: ['核保', '复效', '误告', '体况', '健康', '人工核保', '性别', '年龄', '告知', '批准', '拒绝', '条件承保', '标准体', '次标准体', '体检'],
+    riskWords: ['误告未处理', '漏查', '核保失败', '规则缺失', '未触发', '绕过', '错误判断']
+  },
+  {
+    bizType: 'claims',               // 理赔测试
+    label: '理赔测试',
     icon: '💰',
     color: '#ef4444',
-    defaultRiskWeight: 0.92,
-    keywords: ['理赔', '赔付', '赔款', '理赔申请', '赔偿', '给付', '保险金申请', '赔偿金', '身故赔付'],
-    riskWords: ['金额错误', '超赔', '重复赔付', '核赔失败', '赔付比例', '误判', '自动通过'],
-    description: '涉及保险赔付、理赔申请处理'
-  },
-  {
-    bizType: 'underwriting',
-    label: '核保',
-    icon: '🔍',
-    color: '#8b5cf6',
-    defaultRiskWeight: 0.88,
-    keywords: ['核保', '承保', '核保流程', '投保审核', '健康告知', '风险评估', '核保规则', '拒保', '加费', '标体'],
-    riskWords: ['规则不生效', '绕过', '未拦截', '漏审', '系统放行', '核保失败', '异常通过'],
-    description: '涉及投保资质审核、风险评估'
-  },
-  {
-    bizType: 'renewal',
-    label: '续保',
-    icon: '🔄',
-    color: '#06b6d4',
-    defaultRiskWeight: 0.75,
-    keywords: ['续保', '续期', '续期缴费', '自动续保', '续保提醒', '期满续保', '续保申请', '保单续期'],
-    riskWords: ['续保失败', '重复续保', '未通知', '扣费异常', '续保规则', '数据丢失'],
-    description: '涉及保单续期、续期缴费'
-  },
-  {
-    bizType: 'policy_loan',
-    label: '保单贷款',
-    icon: '🏦',
-    color: '#10b981',
-    defaultRiskWeight: 0.80,
-    keywords: ['保单贷款', '保单质押', '现金价值', '贷款申请', '贷款金额', '质押贷款', '保单借款'],
-    riskWords: ['超限', '超过现金价值', '比例错误', '未校验', '系统允许', '贷款超额'],
-    description: '涉及保单质押贷款操作'
-  },
-  {
-    bizType: 'death_claim',
-    label: '身故理赔',
-    icon: '📋',
-    color: '#64748b',
     defaultRiskWeight: 0.95,
-    keywords: ['身故', '身故理赔', '死亡给付', '身故保险金', '死亡赔偿', '受益人', '身故申请'],
-    riskWords: ['受益人错误', '赔付失败', '核实失败', '流程中断', '数据异常', '金额错误'],
-    description: '涉及被保险人身故后的理赔处理'
+    description: '身故理赔、医疗理赔、意外理赔等理赔业务测试',
+    keywords: ['理赔', '赔付', '身故', '给付', '理赔申请', '受益人', '医疗', '意外', '住院', '医疗费用', '赔款', '理赔金额', '申请理赔', '核赔', '赔案'],
+    riskWords: ['赔付错误', '金额错误', '不符合条款', '拒赔', '漏赔', '超赔', '计算错误', '系统错误']
   },
   {
-    bizType: 'health_insurance',
-    label: '医疗险',
-    icon: '🏥',
-    color: '#22c55e',
-    defaultRiskWeight: 0.82,
-    keywords: ['医疗险', '医疗理赔', '住院', '门诊', '医疗费用', '报销', '医疗报销', '住院费用', '手术费用'],
-    riskWords: ['报销失败', '金额超限', '免赔额错误', '重复报销', '数据丢失', '接口超时'],
-    description: '涉及医疗费用报销、住院理赔'
-  },
-  {
-    bizType: 'policy_service',
-    label: '保全',
-    icon: '🛡️',
-    color: '#f97316',
-    defaultRiskWeight: 0.78,
-    keywords: ['保全', '保单变更', '地址变更', '受益人变更', '联系方式变更', '变更申请', '保全服务', '信息变更'],
-    riskWords: ['变更失败', '未同步', '数据不一致', '未生效', '审批失败', '权限错误'],
-    description: '涉及保单信息变更、服务变更'
+    bizType: 'systemBatch',          // 系统/批处理
+    label: '系统批处理',
+    icon: '⚙️',
+    color: '#f59e0b',
+    defaultRiskWeight: 0.75,
+    description: '批处理任务、系统配置、数据同步等后台系统测试（含P17）',
+    keywords: ['批处理', '批量', '配置', '系统', '数据同步', '接口', '调用', '任务', '定时', '调度', '参数', '环境', '部署', '服务'],
+    riskWords: ['批处理失败', '超时', '数据丢失', '接口错误', '环境异常', '配置错误', '服务不可用']
   }
 ]
 
-/**
- * 4类缺陷大类
- */
-const DEFECT_TYPES = [
-  { type: 'logic',        label: '逻辑系统缺陷', weight: 0.90 },
-  { type: 'environment',  label: '环境阻断缺陷', weight: 0.60 },
-  { type: 'business_req', label: '业务需求缺陷', weight: 0.75 },
-  { type: 'legacy',       label: '系统遗留缺陷', weight: 0.85 },
+// 缺陷类型映射（对齐真实Excel字段）
+const DEFECT_TYPE_MAP = {
+  '系统问题': 'system',
+  '环境问题': 'environment',
+  '遗留问题': 'legacy',
+  '需求问题': 'requirement',
+  '案例问题': 'case'
+}
+
+// 缺陷等级映射
+const DEFECT_LEVEL_MAP = {
+  '严重缺陷': 'high',
+  '一般缺陷': 'medium'
+}
+
+// 测试系统列表（来自真实数据Top系统）
+const TEST_SYSTEMS = [
+  '产品工厂', '保全GPS', '一站式PC端', '新理赔系统', '神太保全',
+  '微信保全', '银保通', '寿险APP', 'P17', '一站式PAD', 'E锦囊', '核保系统'
 ]
 
 /**
- * 责任系统列表
+ * 从真实Excel数据生成缺陷知识库条目
+ * @param {Array} rows - 解析后的Excel行数组
  */
-const RESPONSIBLE_SYSTEMS = ['核心系统', '前端应用', '支付网关', '通知服务', '文档管理', '数据仓库', '第三方接口', '认证系统']
+function parseRealDefects(rows) {
+  const results = []
 
-/**
- * 生成480条历史缺陷数据
- */
-function generateDefectDB() {
-  const defects = []
-  let id = 1
+  for (const row of rows) {
+    const defectId = (row[0] || '').toString().trim()
+    if (!defectId || defectId.length < 3) continue
 
-  const defectTemplates = [
-    // 减保类
-    { bizType: 'claim_reduction', title: '减保金额超过现金价值80%，系统未拦截', severity: 'high', type: 'logic', fixSummary: '在核保接口增加现金价值校验规则，超限时返回错误码ERR_AMOUNT_EXCEED', system: '核心系统' },
-    { bizType: 'claim_reduction', title: '减保后保单状态未同步至前端展示', severity: 'medium', type: 'environment', fixSummary: '修复状态同步异步队列，增加重试机制', system: '前端应用' },
-    { bizType: 'claim_reduction', title: '减保操作成功但未触发保费重算', severity: 'high', type: 'logic', fixSummary: '修复减保后保费触发器，补充单元测试', system: '核心系统' },
-    { bizType: 'claim_reduction', title: '减保申请提交后收不到确认短信', severity: 'low', type: 'environment', fixSummary: '修复通知服务配置，补充邮件通知失败重试逻辑', system: '通知服务' },
-    { bizType: 'claim_reduction', title: '批量减保时部分记录处理失败但无报错', severity: 'high', type: 'logic', fixSummary: '批量处理增加事务控制，失败时回滚并记录错误日志', system: '核心系统' },
-    { bizType: 'claim_reduction', title: '减保至最低保额后仍允许继续减保', severity: 'high', type: 'logic', fixSummary: '增加最低保额校验逻辑BR-011', system: '核心系统' },
-    { bizType: 'claim_reduction', title: '减保历史记录查询接口响应超时', severity: 'medium', type: 'environment', fixSummary: '增加查询缓存，优化SQL索引', system: '数据仓库' },
-    { bizType: 'claim_reduction', title: '减保成功后保全记录创建失败', severity: 'medium', type: 'logic', fixSummary: '修复减保与保全记录联动逻辑', system: '核心系统' },
+    // 提取根因分析
+    const descRaw = (row[35] || '').toString()
+    const rootCauseMatch = descRaw.match(/根因分析[:：]([^\n功能模块]+)/)
+    const rootCause = rootCauseMatch ? rootCauseMatch[1].trim() : ''
+    const funcModuleMatch = descRaw.match(/功能模块[:：]([^\n问题描述]+)/)
+    const funcModule = funcModuleMatch ? funcModuleMatch[1].trim() : ''
+    const problemMatch = descRaw.match(/问题描述[:：](.+)$/s)
+    const problem = problemMatch ? problemMatch[1].trim().replace(/\n/g, ' ') : descRaw.replace(/\n/g, ' ')
 
-    // 理赔类
-    { bizType: 'claims', title: '理赔金额计算错误，差额超过20%', severity: 'high', type: 'logic', fixSummary: '修复理赔金额计算公式，增加精度控制', system: '核心系统' },
-    { bizType: 'claims', title: '重复提交理赔申请未做幂等处理', severity: 'high', type: 'logic', fixSummary: '引入申请号唯一性校验，增加幂等控制', system: '核心系统' },
-    { bizType: 'claims', title: '理赔审批流程中环节跳转逻辑错误', severity: 'high', type: 'logic', fixSummary: '重构审批流转逻辑，增加状态机约束', system: '核心系统' },
-    { bizType: 'claims', title: '理赔材料上传后系统无法识别PDF格式', severity: 'medium', type: 'environment', fixSummary: '升级文件解析库至最新版本', system: '文档管理' },
-    { bizType: 'claims', title: '核赔结果推送第三方系统失败无重试', severity: 'high', type: 'environment', fixSummary: '增加消息队列重试机制，MQ消费端增加幂等', system: '第三方接口' },
-    { bizType: 'claims', title: '理赔到账后短信通知模板内容错误', severity: 'low', type: 'business_req', fixSummary: '更新通知模板，补充金额格式化', system: '通知服务' },
-    { bizType: 'claims', title: '身故理赔受益人优先级规则不符合条款', severity: 'high', type: 'business_req', fixSummary: '按保险条款重新梳理受益人优先级规则', system: '核心系统' },
-    { bizType: 'claims', title: '理赔列表分页查询数据重复', severity: 'medium', type: 'logic', fixSummary: '修复分页SQL，增加唯一索引', system: '数据仓库' },
+    // 缺陷类型清洗
+    const defectTypeRaw = (row[56] || '').toString().replace(/\n/g, '').trim()
+    const defectType = defectTypeRaw.includes('遗留') ? '遗留问题'
+      : defectTypeRaw.includes('需求') ? '需求问题'
+      : defectTypeRaw.includes('案例') ? '案例问题'
+      : defectTypeRaw.includes('环境') ? '环境问题'
+      : '系统问题'
 
-    // 核保类
-    { bizType: 'underwriting', title: '健康告知问卷答案未保存即提交通过', severity: 'high', type: 'logic', fixSummary: '增加问卷完整性校验，必填项拦截', system: '核心系统' },
-    { bizType: 'underwriting', title: '加费核保规则在特定条件下不生效', severity: 'high', type: 'logic', fixSummary: '修复规则引擎条件判断逻辑，补充边界测试', system: '核心系统' },
-    { bizType: 'underwriting', title: '核保决议同步至保单信息延迟超过30分钟', severity: 'medium', type: 'environment', fixSummary: '优化异步同步机制，改用实时推送', system: '核心系统' },
-    { bizType: 'underwriting', title: '体况评估算法在高龄投保人场景判断失误', severity: 'high', type: 'logic', fixSummary: '调整高龄风险系数，增加专项规则', system: '核心系统' },
-    { bizType: 'underwriting', title: '拒保通知书模板内容缺少保单号', severity: 'low', type: 'business_req', fixSummary: '更新拒保通知书模板字段', system: '文档管理' },
-    { bizType: 'underwriting', title: '核保接口超时导致投保流程阻塞', severity: 'high', type: 'environment', fixSummary: '设置合理超时时间，增加熔断降级', system: '第三方接口' },
-    { bizType: 'underwriting', title: '职业类别映射表与条款不一致', severity: 'medium', type: 'business_req', fixSummary: '同步更新职业类别映射表', system: '核心系统' },
-    { bizType: 'underwriting', title: '特种行业投保时风险提示未显示', severity: 'medium', type: 'logic', fixSummary: '修复特殊职业触发条件', system: '前端应用' },
+    // 缺陷等级
+    const defectLevelRaw = (row[59] || '').toString().trim()
+    const severity = defectLevelRaw.includes('严重') ? 'high' : 'medium'
 
-    // 续保类
-    { bizType: 'renewal', title: '自动续保扣款后保单状态未更新', severity: 'high', type: 'logic', fixSummary: '修复扣款回调与保单状态联动', system: '支付网关' },
-    { bizType: 'renewal', title: '续保提醒短信在已续保后仍重复发送', severity: 'medium', type: 'logic', fixSummary: '增加续保状态检查，避免重复通知', system: '通知服务' },
-    { bizType: 'renewal', title: '批量续保时并发冲突导致数据错误', severity: 'high', type: 'logic', fixSummary: '引入分布式锁，解决并发写入问题', system: '核心系统' },
-    { bizType: 'renewal', title: '续保优惠折扣计算逻辑存在漏洞', severity: 'medium', type: 'logic', fixSummary: '重新梳理折扣计算规则，增加测试用例', system: '核心系统' },
-    { bizType: 'renewal', title: '续保期间被保险人信息变更未同步', severity: 'medium', type: 'logic', fixSummary: '修复变更事件监听器', system: '核心系统' },
+    // 业务域
+    const bizDomain = (row[8] || '').toString().replace(/\n/g, '').trim()
 
-    // 保单贷款类
-    { bizType: 'policy_loan', title: '贷款金额超过现金价值80%，系统允许通过', severity: 'high', type: 'logic', fixSummary: '增加贷款金额上限校验规则，80%现金价值为硬上限', system: '核心系统' },
-    { bizType: 'policy_loan', title: '保单贷款后现金价值展示未及时更新', severity: 'medium', type: 'environment', fixSummary: '修复现金价值实时计算逻辑', system: '前端应用' },
-    { bizType: 'policy_loan', title: '贷款利息计算精度损失导致差额', severity: 'high', type: 'logic', fixSummary: '使用高精度计算库替换浮点运算', system: '核心系统' },
-    { bizType: 'policy_loan', title: '还款后贷款记录状态未关闭', severity: 'medium', type: 'logic', fixSummary: '修复还款完成触发器', system: '核心系统' },
+    // 推断bizType
+    let bizType = 'systemBatch'
+    if (bizDomain.includes('承保')) bizType = 'underwriting'
+    else if (bizDomain.includes('保全')) bizType = 'policyService'
+    else if (bizDomain.includes('核保')) bizType = 'underwritingReview'
+    else if (bizDomain.includes('理赔')) bizType = 'claims'
 
-    // 身故理赔类
-    { bizType: 'death_claim', title: '身故证明文件上传后核验接口超时', severity: 'high', type: 'environment', fixSummary: '优化文件核验接口性能，增加异步处理', system: '第三方接口' },
-    { bizType: 'death_claim', title: '受益人顺序判定与条款规则不符', severity: 'high', type: 'business_req', fixSummary: '重新梳理受益人优先级规则，与条款对齐', system: '核心系统' },
-    { bizType: 'death_claim', title: '多受益人分配比例合计不为100%时可提交', severity: 'high', type: 'logic', fixSummary: '增加比例合计校验，误差不超过0.01%', system: '核心系统' },
-    { bizType: 'death_claim', title: '赔付打款后账务系统未收到回执', severity: 'high', type: 'environment', fixSummary: '修复账务系统回执接口，增加重试', system: '支付网关' },
+    // 测试系统清洗
+    const testSystem = (row[10] || '').toString().replace(/\n/g, '').trim()
+    const scenario = (row[11] || '').toString().replace(/\n/g, '').trim()
 
-    // 医疗险类
-    { bizType: 'health_insurance', title: '免赔额计算规则未区分门诊住院', severity: 'high', type: 'business_req', fixSummary: '按条款分别配置门诊/住院免赔额', system: '核心系统' },
-    { bizType: 'health_insurance', title: '医疗报销材料OCR识别失败率超30%', severity: 'high', type: 'environment', fixSummary: '升级OCR引擎，增加人工审核兜底', system: '第三方接口' },
-    { bizType: 'health_insurance', title: '重复报销同一医疗费用未被拦截', severity: 'high', type: 'logic', fixSummary: '增加发票号唯一性校验', system: '核心系统' },
-    { bizType: 'health_insurance', title: '报销比例上限计算未考虑年度累计', severity: 'high', type: 'logic', fixSummary: '增加年度累计报销额跟踪', system: '核心系统' },
-    { bizType: 'health_insurance', title: '社保先行赔付金额抵扣逻辑错误', severity: 'high', type: 'logic', fixSummary: '修复社保/商保联动计算', system: '核心系统' },
-
-    // 保全类
-    { bizType: 'policy_service', title: '受益人变更后旧受益人信息仍显示', severity: 'medium', type: 'logic', fixSummary: '修复变更后缓存刷新机制', system: '前端应用' },
-    { bizType: 'policy_service', title: '地址变更未同步至快递寄送系统', severity: 'medium', type: 'environment', fixSummary: '增加变更事件推送至物流系统', system: '第三方接口' },
-    { bizType: 'policy_service', title: '保全申请提交后流水号重复', severity: 'high', type: 'logic', fixSummary: '修复流水号生成逻辑，增加唯一性约束', system: '核心系统' },
-    { bizType: 'policy_service', title: '银行账号变更时未进行开户验证', severity: 'high', type: 'logic', fixSummary: '集成银行开户验证接口', system: '第三方接口' },
-  ]
-
-  // 扩展到480条
-  const months = ['2023-06','2023-07','2023-08','2023-09','2023-10','2023-11','2023-12','2024-01','2024-02','2024-03','2024-04','2024-05']
-  const statusOptions = ['open','fixed','closed','reopened']
-
-  defectTemplates.forEach((tmpl, idx) => {
-    // 每个模板生成约10条变体
-    const count = Math.floor(480 / defectTemplates.length) + (idx < 480 % defectTemplates.length ? 1 : 0)
-    for (let i = 0; i < count && defects.length < 480; i++) {
-      const month = months[Math.floor(Math.random() * months.length)]
-      const status = i === 0 ? 'closed' : statusOptions[Math.floor(Math.random() * statusOptions.length)]
-      defects.push({
-        defect_id: `DEF-${String(id).padStart(4, '0')}`,
-        title: i === 0 ? tmpl.title : `${tmpl.title}（变体${i}）`,
-        severity: tmpl.severity,
-        biz_type: tmpl.bizType,
-        defect_type: tmpl.type,
-        description: `缺陷描述：${tmpl.title}。发现于${month}版本UAT阶段，影响正常业务流程。`,
-        biz_tags: JSON.stringify([tmpl.bizType, tmpl.type]),
-        fix_summary: tmpl.fixSummary,
-        responsible_system: tmpl.system,
-        status,
-        created_month: month,
-      })
-      id++
+    // 上报时间处理（Excel数值→月份）
+    let defectMonth = (row[65] || '').toString().trim()
+    if (!defectMonth && row[49]) {
+      // Excel日期数值转月份
+      const dateNum = parseFloat(row[49])
+      if (!isNaN(dateNum) && dateNum > 40000) {
+        const date = new Date((dateNum - 25569) * 86400 * 1000)
+        defectMonth = `${date.getMonth() + 1}月`
+      }
     }
-  })
 
-  return defects.slice(0, 480)
+    // 解决方案
+    const solution = (row[64] || '').toString().trim()
+
+    // 险种信息
+    const insuranceProduct = (row[2] || '').toString().replace(/\n/g, '').trim()
+    const productType = (row[5] || '').toString().replace(/\n/g, '').trim()
+
+    // 案例名称作为标题
+    const caseName = (row[13] || '').toString().replace(/\n/g, ' ').trim()
+    const title = caseName.length > 5 ? caseName.substring(0, 100)
+      : (problem.length > 5 ? problem.substring(0, 100) : `${bizDomain}缺陷${defectId}`)
+
+    results.push({
+      defect_id: defectId,
+      title: title.substring(0, 200),
+      severity,
+      biz_type: bizType,
+      biz_domain: bizDomain,
+      defect_type: DEFECT_TYPE_MAP[defectType] || 'system',
+      defect_level: defectLevelRaw.trim(),
+      description: problem.substring(0, 500),
+      root_cause: rootCause.substring(0, 200),
+      func_module: funcModule.substring(0, 100),
+      insurance_product: insuranceProduct.substring(0, 100),
+      product_type: productType.substring(0, 50),
+      test_system: testSystem.substring(0, 50),
+      scenario: scenario.substring(0, 50),
+      biz_tags: JSON.stringify([bizDomain, scenario, productType].filter(Boolean)),
+      fix_summary: solution.substring(0, 200),
+      responsible_system: testSystem.substring(0, 50) || bizDomain,
+      status: ((row[62] || '').toString().includes('解决') ? 'closed' : 'open'),
+      created_month: defectMonth || '未知',
+      tester: (row[69] || '').toString().trim()
+    })
+  }
+
+  return results
 }
 
-module.exports = { BIZ_TEMPLATES, DEFECT_TYPES, RESPONSIBLE_SYSTEMS, generateDefectDB }
+/**
+ * 生成模拟缺陷数据（fallback，当无真实数据时使用）
+ */
+function generateDefectDB() {
+  const templates = [
+    { bizType: 'underwriting', titles: ['录单时投保人关系校验失败', '保额超限未拦截', '被保险人年龄校验错误', '投保单重复提交未校验', '保费计算结果与预期不符'] },
+    { bizType: 'policyService', titles: ['减保金额计算错误', '退保现金价值不正确', '贷款额度超出限制未提示', '受益人变更后保单未更新', '犹豫期撤保流程异常'] },
+    { bizType: 'underwritingReview', titles: ['性别年龄误告后系统未触发核保', '复效申请核保规则缺失', '人工核保结论未同步保单', '体况告知问题未记录', '核保拒绝后仍可投保'] },
+    { bizType: 'claims', titles: ['身故理赔金额计算错误', '理赔申请无法提交', '医疗理赔重复申请未拦截', '赔付记录未生成', '受益人信息不一致'] },
+    { bizType: 'systemBatch', titles: ['批处理任务超时失败', '数据同步接口异常', '定时任务未触发', '系统配置参数读取失败', '跨系统接口调用错误'] },
+  ]
+  const results = []
+  let idx = 1
+  const months = ['1月','2月','3月','4月','5月','6月','7月','8月']
+  for (const t of templates) {
+    for (const title of t.titles) {
+      results.push({
+        defect_id: `MOCK-2025-${String(idx).padStart(3,'0')}`,
+        title, severity: idx % 3 === 0 ? 'high' : 'medium',
+        biz_type: t.bizType, biz_domain: '',
+        defect_type: idx % 4 === 0 ? 'environment' : 'system',
+        defect_level: idx % 3 === 0 ? '严重缺陷' : '一般缺陷',
+        description: `缺陷详情：${title}`, root_cause: '待分析',
+        func_module: '', insurance_product: '', product_type: '',
+        test_system: '', scenario: '',
+        biz_tags: JSON.stringify([t.bizType]),
+        fix_summary: '代码修复', responsible_system: t.bizType,
+        status: 'closed', created_month: months[idx % months.length], tester: ''
+      })
+      idx++
+    }
+  }
+  return results
+}
+
+module.exports = { BIZ_TEMPLATES, DEFECT_TYPE_MAP, DEFECT_LEVEL_MAP, TEST_SYSTEMS, parseRealDefects, generateDefectDB }

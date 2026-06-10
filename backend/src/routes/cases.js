@@ -193,4 +193,27 @@ router.get('/defect-db/list', (req, res) => {
   res.json({ code: 200, data: defects, total: defects.length })
 })
 
+/**
+ * POST /api/v1/cases/:id/feedback
+ * 提交案例反馈（命中/误报/漏报）
+ */
+router.post('/:id/feedback', (req, res) => {
+  try {
+    const { feedback } = req.body
+    if (!['hit', 'false_alarm', 'missed', 'none'].includes(feedback)) {
+      return res.status(400).json({ code: 400, message: '反馈类型无效' })
+    }
+    const db = getDb()
+    const result = db.prepare('UPDATE test_cases SET feedback = ? WHERE id = ?').run(feedback, req.params.id)
+    if (result.changes === 0) {
+      return res.status(404).json({ code: 404, message: '未找到对应案例' })
+    }
+    db._flush()
+    res.json({ code: 200, message: '反馈提交成功' })
+  } catch (err) {
+    console.error('[Cases] 反馈提交失败:', err)
+    res.status(500).json({ code: 500, message: '反馈提交失败', error: err.message })
+  }
+})
+
 module.exports = router
