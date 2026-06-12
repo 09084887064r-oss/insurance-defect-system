@@ -70,9 +70,9 @@ async function startServer() {
     // 启动 5 秒后执行一次，触发演示预警
     setTimeout(() => runAlertCheck(), 5000)
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log('')
-      console.log(`🚀 后端服务已启动：http://localhost:${PORT}`)
+      console.log(`🚀 后端服务已启动，支持局域网访问`)
       console.log(`📊 保险缺陷预警系统 — 准备就绪`)
       console.log('')
     })
