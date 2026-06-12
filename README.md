@@ -1,105 +1,122 @@
-# 保险产品用户测试缺陷预警系统 — 安装与启动指南
+# 保险产品用户测试缺陷预警系统 — 安装与使用指南
 
-## 快速开始
+保险产品用户测试缺陷预警系统（UAT Defect Warning System）是一套专为保险核心业务系统（承保、核保、保全、理赔、批处理）打造的智能 UAT 质量管理平台。系统内置大语言模型评估引擎、语义向量检索引擎与实时指标大盘，致力于提高测试用例覆盖率、拦截高风险用例，防范缺陷遗漏。
+
+---
+
+## 🚀 快速开始
 
 ### 第一步：安装 Node.js
 
-由于系统未检测到 Node.js，请先安装：
-
-1. 访问 [https://nodejs.org](https://nodejs.org)
-2. 下载 **LTS 版本**（推荐 v20.x）
-3. 运行安装程序，全部默认即可
-4. **重要**：安装完成后，关闭并重新打开终端/命令行
+请确保本地已安装 Node.js 环境（推荐 **LTS 版本**，如 v20.x 或更高版本）。
 
 验证安装：
-```
+```bash
 node --version
 npm --version
 ```
 
 ---
 
-### 第二步：安装后端依赖
+### 第二步：安装依赖
 
-```powershell
-cd C:\Users\PC\.gemini\antigravity-ide\scratch\insurance-defect-system\backend
+#### 1. 安装后端依赖
+```bash
+# 进入后端目录并安装依赖
+cd backend
 npm install
 ```
 
-### 第三步：安装前端依赖
-
-```powershell
-cd C:\Users\PC\.gemini\antigravity-ide\scratch\insurance-defect-system\frontend
+#### 2. 安装前端依赖
+```bash
+# 进入前端目录并安装依赖
+cd ../frontend
 npm install
 ```
 
-### 第四步：启动后端服务
+---
 
-```powershell
-cd C:\Users\PC\.gemini\antigravity-ide\scratch\insurance-defect-system\backend
+### 第三步：运行与开发
+
+#### 1. 启动后端服务
+```bash
+# 在 backend 目录下启动服务
+cd ../backend
 npm run dev
 ```
+后端将在 **http://localhost:3001** 启动，自动初始化 SQLite 数据库、创建表结构并插入初始演示数据。
 
-后端将在 **http://localhost:3001** 启动，并自动初始化数据库和演示数据。
-
-### 第五步：启动前端（新开一个终端窗口）
-
-```powershell
-cd C:\Users\PC\.gemini\antigravity-ide\scratch\insurance-defect-system\frontend
+#### 2. 启动前端服务（需新开一个终端窗口）
+```bash
+# 在 frontend 目录下启动开发服务器
+cd ../frontend
 npm run dev
 ```
+前端开发服务器将在 **http://localhost:5173** 启动，且已自动配置反向代理指向后端 `3001` 端口。
 
-前端将在 **http://localhost:5173** 启动。
+#### 3. 生产构建发布
+```bash
+# 在 frontend 目录下执行构建，将前端静态产物编译并托管在后端
+npm run build
+```
+编译成功后，后端服务会直接在 `http://127.0.0.1:3001` 静态托管全套网站，无需单独启动前端开发服务器。
 
 ---
 
-## 演示账号
+## 👥 演示账号与角色权限
 
-| 角色 | 邮箱 | 密码 | 权限 |
-|------|------|------|------|
-| 管理员 | admin@insure-test.com | admin123 | 全部功能 |
-| 项目经理 | manager@insure-test.com | manager123 | 管理规则/产品/版本 |
-| 开发人员 | dev@insure-test.com | dev123 | 处理缺陷 |
-| 测试员 | tester@insure-test.com | tester123 | 提交/查看缺陷 |
+| 角色 | 邮箱 | 密码 | 权限范围 |
+| :--- | :--- | :--- | :--- |
+| **系统管理员** | `admin@insure-test.com` | `admin123` | 全系统所有功能、协同双签审计核签权限 |
+| **项目经理** | `manager@insure-test.com` | `manager123` | 规则配置、产品与测试版本管理、高危用例双签审核 |
+| **开发人员** | `dev@insure-test.com` | `dev123` | 查看及处理被分派的缺陷、编写修复方案 |
+| **测试工程师** | `tester@insure-test.com` | `tester123` | 提交/查看缺陷、上传测试用例分析、预测质量反馈打标 |
 
 ---
 
-## 项目结构
+## 📂 项目结构
 
 ```
 insurance-defect-system/
 ├── backend/
-│   ├── data/              # SQLite 数据库文件（自动生成）
+│   ├── data/              # SQLite 数据库目录（自动生成 insurance_defects.db）
 │   ├── src/
-│   │   ├── app.js         # Express 入口
-│   │   ├── database/      # 数据库初始化 & 种子数据
-│   │   ├── middleware/    # JWT 认证中间件
-│   │   ├── routes/        # API 路由（8个模块）
-│   │   └── services/      # 预警引擎 & SSE & 通知服务
+│   │   ├── app.js         # 后端服务主入口（托管静态资源与挂载 API）
+│   │   ├── database/      # 数据库初始化表结构定义与种子数据
+│   │   ├── middleware/    # JWT 身份鉴权与角色拦截中间件
+│   │   ├── routes/        # RESTful API 控制器路由层
+│   │   └── services/      # 核心服务层（向量搜索引擎、LLM评估、通知、预警定时任务）
 │   └── package.json
 └── frontend/
     ├── src/
-    │   ├── pages/          # 8个页面组件
-    │   ├── components/     # 通用组件（Layout, DefectForm）
-    │   ├── services/       # API 调用层
+    │   ├── pages/          # 前端页面（案例智能分析、仪表盘、缺陷追踪等）
+    │   ├── components/     # 通用组件（Layout, DefectForm, 图表库）
+    │   ├── services/       # 前端 API 请求封装
     │   ├── store/          # Zustand 状态管理
-    │   ├── App.jsx         # 路由 & SSE连接
-    │   ├── main.jsx        # React入口 & Ant Design主题
-    │   └── index.css       # 全局深色主题样式
+    │   ├── App.jsx         # 路由定义与 SSE 实时消息推送连接
+    │   ├── main.jsx        # React DOM 入口
+    │   └── index.css       # 全局深色系美化与响应式样式
     └── package.json
 ```
 
 ---
 
-## 功能说明
+## 💎 特色与高级功能说明
 
-| 模块 | 功能 |
-|------|------|
-| 🏠 仪表盘 | 实时统计卡片、5种ECharts图表、产品健康度评分 |
-| 🐛 缺陷管理 | 全生命周期管理、多条件筛选、状态流转 |
-| 🔍 缺陷详情 | 评论时间线、指派操作、复现步骤记录 |
-| 🚨 预警中心 | 自定义规则、实时触发、SSE推送 |
-| 🏢 产品管理 | 保险产品 CRUD、类型分类 |
-| 🌿 版本管理 | 测试版本 CRUD、进度条展示 |
-| 📄 报告生成 | 一键导出 PDF & Excel |
-| 👥 用户管理 | 4种角色、权限控制 |
+系统提供八大基础功能模块及全新的**智能化与安全管控特性**：
+
+### 1. 🧠 混合语义向量缺陷召回 (Hybrid Vector Search)
+* **大模型嵌入向量 (Embeddings)**：如果 Ollama 接口在线，调用神经网络大模型生成缺陷与案例的特征向量，通过**余弦相似度 (Cosine Similarity)** 进行语义级召回。
+* **本地 VSM 稀疏向量 (VSM TF-IDF Fallback)**：大模型不在线时，自动秒级降级至本地自研 VSM 引擎。基于 **N-Gram（双向字符切分）分词技术** 计算 TF-IDF 并进行余弦检索，耗时仅需 **4ms**，精准召回如“犹豫期撤保”、“工本费全额退”等近义场景缺陷。
+
+### 2. 🛡️ 安全合规：PII 数据脱敏与防注入拦截
+* **数据掩码脱敏**：系统在前置解析阶段识别并对敏感字段（手机号、身份证号、保单借款号）进行掩码覆盖（如 `138****5678`），脱敏后数据一致性落盘并对外展示，有效防护客户隐私。
+* **Prompt 注入检测**：实时拦截恶意前置越权篡改指令（如 `ignore previous instructions`），一旦命中，自动挂起分析并强制评估为最高风险 **10.0 分**，输出安全拦截日志。
+
+### 3. 👥 协同测试“高危双签”工作流
+* 针对大模型评分 $\ge 8.0$ 的高风险案例，其流转状态默认为 `⏳ 待双签审计`。
+* 只有具备 `admin` 或 `manager` 角色的用户才具备双签核签权限。核签通过后，状态变更为 `✅ 已审计双签`，方准予进入执行和关闭阶段。
+
+### 4. 📈 预测质量自演进评估大盘
+* 测试人员可针对分析得出的建议对系统打标反馈（`Hit 命中` / `False Alarm 误报` / `Missed 漏报`）。
+* 系统自动根据打标数据动态计算并展示大模型的 **准确率 (Accuracy)**、**精确率 (Precision)**、**召回率 (Recall)** 和 **F1-Score**，实现预警模型效果的质量自闭环监控。
