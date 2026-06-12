@@ -117,4 +117,78 @@ router.get('/product-health', (req, res) => {
   res.json({ success: true, data: health });
 });
 
+// GET /api/dashboard/sla-aging
+router.get('/sla-aging', (req, res) => {
+  const db = getDb();
+  const { version_id } = req.query;
+  const vf = version_id ? 'AND version_id = ?' : '';
+  const vp = version_id ? [version_id] : [];
+  
+  // Closed defects resolution time
+  const closedAging = db.prepare(`
+    SELECT 
+      SUM(CASE WHEN (julianday(closed_at) - julianday(created_at)) <= 1 THEN 1 ELSE 0 END) as day1,
+      SUM(CASE WHEN (julianday(closed_at) - julianday(created_at)) > 1 AND (julianday(closed_at) - julianday(created_at)) <= 3 THEN 1 ELSE 0 END) as day3,
+      SUM(CASE WHEN (julianday(closed_at) - julianday(created_at)) > 3 AND (julianday(closed_at) - julianday(created_at)) <= 7 THEN 1 ELSE 0 END) as day7,
+      SUM(CASE WHEN (julianday(closed_at) - julianday(created_at)) > 7 THEN 1 ELSE 0 END) as dayMore
+    FROM defects
+    WHERE status = 'closed' AND closed_at IS NOT NULL ${vf}
+  `).get(...vp);
+
+  // Open defects aging (current time - created_at)
+  const openAging = db.prepare(`
+    SELECT 
+      SUM(CASE WHEN (julianday('now', 'localtime') - julianday(created_at)) <= 1 THEN 1 ELSE 0 END) as day1,
+      SUM(CASE WHEN (julianday('now', 'localtime') - julianday(created_at)) > 1 AND (julianday('now', 'localtime') - julianday(created_at)) <= 3 THEN 1 ELSE 0 END) as day3,
+      SUM(CASE WHEN (julianday('now', 'localtime') - julianday(created_at)) > 3 AND (julianday('now', 'localtime') - julianday(created_at)) <= 7 THEN 1 ELSE 0 END) as day7,
+      SUM(CASE WHEN (julianday('now', 'localtime') - julianday(created_at)) > 7 THEN 1 ELSE 0 END) as dayMore
+    FROM defects
+    WHERE status NOT IN ('closed', 'rejected') ${vf}
+  `).get(...vp);
+
+  res.json({
+    success: true,
+    data: {
+      closed: [
+        { name: '24小时内', value: closedAging.day1 || 0 },
+        { name: '1-3天', value: closedAging.day3 || 0 },
+        { name: '3-7天', value: closedAging.day7 || 0 },
+        { name: '7天以上', value: closedAging.dayMore || 0 },
+      ],
+      open: [
+        { name: '1天内', value: openAging.day1 || 0 },
+        { name: '1-3天', value: openAging.day3 || 0 },
+        { name: '3-7天', value: openAging.day7 || 0 },
+        { name: '7天以上', value: openAging.dayMore || 0 },
+      ]
+    }
+  });
+});
+
+// GET /api/dashboard/developer-backlog
+router.get('/developer-backlog', (req, res) => {
+  const db = getDb();
+  const { version_id } = req.query;
+  const vf = version_id ? 'AND d.version_id = ?' : '';
+  const vp = version_id ? [version_id] : [];
+  
+  const backlog = db.prepare(`
+    SELECT 
+      u.name as developer,
+      COUNT(d.id) as total,
+      SUM(CASE WHEN d.severity IN ('fatal', 'critical') THEN 1 ELSE 0 END) as highSeverity
+    FROM defects d
+    LEFT JOIN users u ON d.assignee_id = u.id
+    WHERE d.status NOT IN ('closed', 'rejected') AND d.assignee_id IS NOT NULL ${vf}
+    GROUP BY d.assignee_id
+    ORDER BY total DESC
+    LIMIT 10
+  `).all(...vp);
+
+  res.json({
+    success: true,
+    data: backlog
+  });
+});
+
 module.exports = router;

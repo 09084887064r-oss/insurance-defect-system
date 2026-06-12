@@ -6,6 +6,15 @@ import { useAuthStore } from '../store'
 
 const { Title, Text } = Typography
 
+export const CpicLogo = ({ size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+    <circle cx="50" cy="50" r="48" fill="#004f9f" />
+    <path d="M28 72 C32 46, 52 34, 72 34 C58 48, 48 62, 46 72 Z" fill="#ffffff" />
+    <path d="M46 72 C48 56, 62 44, 76 44 C66 54, 58 64, 58 72 Z" fill="#ffffff" stroke="#004f9f" strokeWidth="1" />
+    <circle cx="68" cy="70" r="7" fill="#f59e0b" />
+  </svg>
+)
+
 const DEMO_ACCOUNTS = [
   { email: 'admin@insure-test.com', password: 'admin123', role: '管理员', color: '#7c3aed' },
   { email: 'manager@insure-test.com', password: 'manager123', role: '项目经理', color: '#4f46e5' },
@@ -46,7 +55,7 @@ export default function LoginPage() {
       {/* Background decorations */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse at 20% 50%, rgba(79,70,229,0.12) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(124,58,237,0.08) 0%, transparent 50%)',
+        background: 'radial-gradient(ellipse at 20% 50%, rgba(0,79,159,0.06) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(0,102,204,0.04) 0%, transparent 50%)',
         pointerEvents: 'none'
       }} />
 
@@ -55,13 +64,12 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             width: 64, height: 64, borderRadius: 18,
-            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+            background: 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, margin: '0 auto 16px',
-            boxShadow: '0 8px 32px rgba(79,70,229,0.4)'
-          }}>🛡️</div>
+            margin: '0 auto 16px',
+          }}><CpicLogo size={64} /></div>
           <Title level={3} style={{ color: 'var(--text-primary)', margin: 0, fontWeight: 700 }}>
-            缺陷预警系统
+            产品测试缺陷预警系统
           </Title>
           <Text style={{ color: 'var(--text-muted)', fontSize: 13 }}>
             保险产品用户测试管理平台
@@ -80,7 +88,7 @@ export default function LoginPage() {
               <Input.Password prefix={<LockOutlined style={{ color: 'var(--text-muted)' }} />} placeholder="••••••••" />
             </Form.Item>
             <Button type="primary" htmlType="submit" block loading={loading}
-              style={{ height: 44, fontWeight: 600, background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', border: 'none' }}>
+              style={{ height: 44, fontWeight: 600, background: 'linear-gradient(135deg, #004f9f, #0066cc)', border: 'none' }}>
               登 录
             </Button>
           </Form>

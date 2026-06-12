@@ -78,7 +78,7 @@ export default function ProductsPage() {
         </div>
         {['admin', 'manager'].includes(user?.role) && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}
-            style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', border: 'none' }}>
+            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-light))', border: 'none' }}>
             新建产品
           </Button>
         )}
@@ -89,9 +89,9 @@ export default function ProductsPage() {
           <div key={p.id} style={{
             background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 20,
             transition: 'all 0.2s', cursor: 'pointer',
-            borderLeft: `4px solid ${TYPE_COLORS[p.type] ? `var(--${TYPE_COLORS[p.type]}-6, #4f46e5)` : '#4f46e5'}`
+            borderLeft: `4px solid ${TYPE_COLORS[p.type] ? `var(--${TYPE_COLORS[p.type]}-6, var(--accent))` : 'var(--accent)'}`
           }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#4f46e5'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -131,7 +131,7 @@ export default function ProductsPage() {
               </Select>
             </Form.Item>
           )}
-          <Button type="primary" htmlType="submit" block style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', border: 'none', height: 42, fontWeight: 600 }}>
+          <Button type="primary" htmlType="submit" block style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-light))', border: 'none', height: 42, fontWeight: 600 }}>
             {editing ? '保存修改' : '创建产品'}
           </Button>
         </Form>

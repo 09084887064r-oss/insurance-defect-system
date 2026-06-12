@@ -285,25 +285,25 @@ router.get('/charts/:chartId', (req, res) => {
       }
 
       case 'product_compare': {
-        // 产品线对比（使用当前缺陷追踪模块数据）
+        // 产品线对比（重新根据历史缺陷知识库 defect_db 数据填充）
         const rows = db.prepare(`
-          SELECT p.name as product,
-                 COUNT(d.id) as total,
-                 SUM(CASE WHEN d.severity='fatal' THEN 1 ELSE 0 END) as fatal,
-                 SUM(CASE WHEN d.severity='critical' THEN 1 ELSE 0 END) as critical,
-                 SUM(CASE WHEN d.status='closed' THEN 1 ELSE 0 END) as closed
-          FROM products p
-          LEFT JOIN test_versions tv ON tv.product_id = p.id
-          LEFT JOIN defects d ON d.version_id = tv.id
-          GROUP BY p.id
+          SELECT insurance_product as product,
+                 COUNT(*) as total,
+                 SUM(CASE WHEN severity='high' THEN 1 ELSE 0 END) as high,
+                 SUM(CASE WHEN severity='medium' THEN 1 ELSE 0 END) as medium,
+                 SUM(CASE WHEN severity='low' THEN 1 ELSE 0 END) as low
+          FROM defect_db
+          WHERE insurance_product IS NOT NULL AND insurance_product != '' AND insurance_product != '未知'
+          GROUP BY insurance_product
           ORDER BY total DESC
+          LIMIT 10
         `).all()
         data = {
           products: rows.map(r => r.product),
           series: [
-            { name: '致命',  data: rows.map(r => r.fatal),    color: '#ef4444' },
-            { name: '严重',  data: rows.map(r => r.critical), color: '#f59e0b' },
-            { name: '已关闭',data: rows.map(r => r.closed),   color: '#10b981' },
+            { name: '高危',  data: rows.map(r => r.high),    color: '#ef4444' },
+            { name: '中危',  data: rows.map(r => r.medium),  color: '#f59e0b' },
+            { name: '低危',  data: rows.map(r => r.low),     color: '#10b981' },
             { name: '总计',  data: rows.map(r => r.total),    color: '#6366f1' },
           ]
         }

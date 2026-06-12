@@ -4,33 +4,43 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined, BugOutlined, SafetyOutlined, AppstoreOutlined,
   BranchesOutlined, AlertOutlined, FileTextOutlined, TeamOutlined,
-  BellOutlined, LogoutOutlined, UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined
+  BellOutlined, LogoutOutlined, UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
+  AimOutlined, BarChartOutlined
 } from '@ant-design/icons'
 import { useAuthStore, useNotificationStore } from '../../store'
+
+export const CpicLogo = ({ size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+    <circle cx="50" cy="50" r="48" fill="#004f9f" />
+    <path d="M28 72 C32 46, 52 34, 72 34 C58 48, 48 62, 46 72 Z" fill="#ffffff" />
+    <path d="M46 72 C48 56, 62 44, 76 44 C66 54, 58 64, 58 72 Z" fill="#ffffff" stroke="#004f9f" strokeWidth="1" />
+    <circle cx="68" cy="70" r="7" fill="#f59e0b" />
+  </svg>
+)
 
 const { Sider, Content, Header } = Layout
 
 const menuItems = [
   // ── AI 核心模块（新增）──────────────────────────────
   {
-    key: 'ai-group', label: '✨ 智能分析', type: 'group',
+    key: 'ai-group', label: '智能分析', type: 'group',
     children: [
-      { key: '/case-analysis',   icon: <span style={{fontSize:16}}>🎯</span>, label: '案例风险分析' },
-      { key: '/analytics-board', icon: <span style={{fontSize:16}}>📊</span>, label: '缺陷分析看板' },
+      { key: '/case-analysis',   icon: <AimOutlined />, label: '案例风险分析' },
+      { key: '/analytics-board', icon: <BarChartOutlined />, label: '缺陷分析看板' },
     ]
   },
   // ── 原有缺陷跟踪模块（保留）─────────────────────────
   {
-    key: 'track-group', label: '🐛 缺陷跟踪', type: 'group',
+    key: 'track-group', label: '缺陷跟踪', type: 'group',
     children: [
-      { key: '/dashboard', icon: <DashboardOutlined />, label: '数据仪表盘' },
+      { key: '/dashboard', icon: <DashboardOutlined />, label: '实时质量大屏' },
       { key: '/defects',   icon: <BugOutlined />,        label: '缺陷管理' },
       { key: '/alerts',    icon: <AlertOutlined />,       label: '预警中心' },
     ]
   },
   // ── 基础配置模块（保留）─────────────────────────────
   {
-    key: 'base-group', label: '⚙️ 系统配置', type: 'group',
+    key: 'base-group', label: '系统配置', type: 'group',
     children: [
       { key: '/products', icon: <AppstoreOutlined />,  label: '保险产品' },
       { key: '/versions', icon: <BranchesOutlined />,  label: '测试版本' },
@@ -42,7 +52,7 @@ const menuItems = [
 
 
 const roleLabels = { admin: '管理员', manager: '项目经理', developer: '开发人员', tester: '测试员' }
-const roleColors = { admin: '#7c3aed', manager: '#4f46e5', developer: '#0891b2', tester: '#059669' }
+const roleColors = { admin: '#004f9f', manager: '#0066cc', developer: '#0891b2', tester: '#059669' }
 
 export default function MainLayout() {
   const navigate = useNavigate()
@@ -71,7 +81,7 @@ export default function MainLayout() {
         trigger={null}
         width={220}
         style={{
-          background: 'var(--bg-primary)',
+          background: 'var(--bg-secondary)',
           borderRight: '1px solid var(--border)',
           position: 'fixed',
           height: '100vh',
@@ -83,11 +93,13 @@ export default function MainLayout() {
         {/* Logo */}
         <div style={{ padding: collapsed ? '20px 12px' : '20px 16px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
           <div className="logo-area" style={{ justifyContent: collapsed ? 'center' : 'flex-start' }}>
-            <div className="logo-icon">🛡️</div>
+            <div className="logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CpicLogo size={28} />
+            </div>
             {!collapsed && (
               <div>
-                <div className="logo-text">缺陷预警</div>
-                <div className="logo-sub">保险UAT管理平台</div>
+                <div className="logo-text">产品测试缺陷预警</div>
+                <div className="logo-sub">产品测试缺陷预警系统</div>
               </div>
             )}
           </div>
@@ -99,7 +111,7 @@ export default function MainLayout() {
           items={menuItems}
           onClick={({ key }) => navigate(key)}
           style={{ background: 'transparent', border: 'none', padding: '0 8px' }}
-          theme="dark"
+          theme="light"
         />
       </Sider>
 
@@ -136,7 +148,7 @@ export default function MainLayout() {
               <Space style={{ cursor: 'pointer' }}>
                 <Avatar
                   size={32}
-                  style={{ background: roleColors[user?.role] || '#4f46e5', fontWeight: 600, fontSize: 13 }}
+                  style={{ background: roleColors[user?.role] || 'var(--accent)', fontWeight: 600, fontSize: 13 }}
                 >
                   {user?.name?.charAt(0)}
                 </Avatar>

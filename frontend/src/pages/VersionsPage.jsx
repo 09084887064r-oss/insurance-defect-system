@@ -76,7 +76,7 @@ export default function VersionsPage() {
         </div>
         {['admin', 'manager'].includes(user?.role) && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}
-            style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', border: 'none' }}>
+            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-light))', border: 'none' }}>
             新建版本
           </Button>
         )}
@@ -152,7 +152,7 @@ export default function VersionsPage() {
               </Form.Item>
             )}
           </div>
-          <Button type="primary" htmlType="submit" block style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', border: 'none', height: 42, fontWeight: 600 }}>
+          <Button type="primary" htmlType="submit" block style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-light))', border: 'none', height: 42, fontWeight: 600 }}>
             {editing ? '保存修改' : '创建版本'}
           </Button>
         </Form>

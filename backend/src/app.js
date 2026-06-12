@@ -22,7 +22,7 @@ const app = express()
 const PORT = process.env.PORT || 3001
 
 // ── 中间件 ────────────────────────────────────────────────
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
+app.use(cors({ origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], credentials: true }))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
@@ -46,6 +46,14 @@ app.use('/api/v1',            analyticsBoardRoutes)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '../../frontend/dist')))
+
+// Wildcard route to handle React Router client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'))
 })
 
 // ── 异步启动（等待 sql.js 初始化完成后再监听端口）────────

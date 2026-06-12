@@ -81,7 +81,7 @@ export default function AlertsPage() {
           <Button icon={<ThunderboltOutlined />} onClick={triggerCheck} type="default">立即检查</Button>
           {['admin', 'manager'].includes(user?.role) && (
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowRuleModal(true)}
-              style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', border: 'none' }}>
+              style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-light))', border: 'none' }}>
               新建规则
             </Button>
           )}
@@ -147,7 +147,7 @@ export default function AlertsPage() {
             <div key={r.id} style={{
               background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 16,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              borderLeft: `4px solid ${LEVEL_CONFIG[r.alert_level]?.color || '#4f46e5'}`
+              borderLeft: `4px solid ${LEVEL_CONFIG[r.alert_level]?.color || 'var(--accent)'}`
             }}>
               <div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
@@ -201,7 +201,7 @@ export default function AlertsPage() {
             </Form.Item>
           </div>
           <Button type="primary" htmlType="submit" block
-            style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', border: 'none', height: 42, fontWeight: 600 }}>
+            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-light))', border: 'none', height: 42, fontWeight: 600 }}>
             创建规则
           </Button>
         </Form>

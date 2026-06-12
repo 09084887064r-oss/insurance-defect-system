@@ -131,13 +131,15 @@ function retrieveSimilarDefects(caseText, bizTypes, limit = 5) {
     .slice(0, limit)
 }
 
+const { callLLM, maskSensitiveData } = require('./llmService')
+
 /**
  * 核心评分函数：对单条测试案例进行风险评分
  * @param {string} caseText - 测试案例文本
  * @param {string} [caseId] - 案例ID（可选）
- * @returns {object} 评分结果
+ * @returns {Promise<object>} 评分结果
  */
-function scoreTestCase(caseText, caseId = null) {
+async function scoreTestCase(caseText, caseId = null) {
   if (!caseText || !caseText.trim()) {
     return {
       caseId, caseText,
@@ -148,62 +150,25 @@ function scoreTestCase(caseText, caseId = null) {
     }
   }
 
+  // 前置敏感数据脱敏 (PII Masking)
+  const maskedText = maskSensitiveData(caseText)
+
   // 1. 业务类型识别
-  const bizTypes = detectBizTypes(caseText)
-  const primaryBizType = bizTypes[0] || null
+  const bizTypes = detectBizTypes(maskedText)
 
   // 2. 历史缺陷检索
-  const similarDefects = retrieveSimilarDefects(caseText, bizTypes)
+  const similarDefects = retrieveSimilarDefects(maskedText, bizTypes)
 
-  // 3. 各维度评分计算
-
-  // 维度1：历史缺陷匹配度（0-1）
-  let matchScore = 0
-  if (similarDefects.length > 0) {
-    // 基于最相似缺陷的严重程度和数量
-    const topDefect = similarDefects[0]
-    const baseSeverityScore = (SEVERITY_SCORE[topDefect.severity] || 3) / 10
-    const quantityBonus = Math.min(similarDefects.filter(d => d.severity === 'high').length * 0.1, 0.3)
-    matchScore = Math.min(baseSeverityScore + quantityBonus, 1.0)
-  } else {
-    matchScore = 0.1 // 无历史匹配，低基础分
-  }
-
-  // 维度2：业务复杂度（0-1，来自bizTemplate.defaultRiskWeight）
-  const bizComplexity = primaryBizType ? primaryBizType.defaultRiskWeight : 0.5
-
-  // 维度3：历史最高严重级别（0-1）
-  const maxSeverity = similarDefects.length
-    ? Math.max(...similarDefects.map(d => SEVERITY_SCORE[d.severity] || 0)) / 10
-    : 0.2
-
-  // 维度4：风险词命中率（0-1）
-  const riskWordScore = calcRiskWordScore(caseText, bizTypes)
-
-  // 加权求和（满分10分）
-  const rawScore = (
-    matchScore     * 0.40 +
-    bizComplexity  * 0.25 +
-    maxSeverity    * 0.20 +
-    riskWordScore  * 0.15
-  ) * 10
-
-  const riskScore = Math.min(Math.round(rawScore * 10) / 10, 10.0)
-  const riskLevel = getRiskLevel(riskScore)
-
-  // 生成评分依据
-  const reason = buildReason(riskScore, riskLevel, bizTypes, similarDefects, matchScore, riskWordScore)
-
-  // 生成检查建议
-  const checkPoints = buildCheckPoints(bizTypes, similarDefects, riskScore)
+  // 3. 大模型风险评分与智能排序引擎 (基于Qwen大模型或语义规则引擎)
+  const llmResult = await callLLM(maskedText, similarDefects)
 
   return {
     caseId,
-    caseText: caseText.substring(0, 200),
-    riskScore,
-    riskLevel,
-    riskLabel: getRiskLabel(riskLevel),
-    riskColor: getRiskColor(riskLevel),
+    caseText: maskedText.substring(0, 200),
+    riskScore: llmResult.riskScore,
+    riskLevel: llmResult.riskLevel,
+    riskLabel: getRiskLabel(llmResult.riskLevel),
+    riskColor: getRiskColor(llmResult.riskLevel),
     bizTypes: bizTypes.map(b => ({ bizType: b.bizType, label: b.label, icon: b.icon })),
     similarDefects: similarDefects.map(d => ({
       defect_id: d.defect_id,
@@ -214,83 +179,22 @@ function scoreTestCase(caseText, caseId = null) {
       created_month: d.created_month,
       responsible_system: d.responsible_system
     })),
-    reason,
-    checkPoints
+    reason: llmResult.reason,
+    checkPoints: llmResult.checkPoints
   }
-}
-
-function buildReason(score, level, bizTypes, defects, matchScore, riskWordScore) {
-  const parts = []
-
-  if (bizTypes.length) {
-    parts.push(`业务类型识别为【${bizTypes.map(b => b.label).join('、')}】`)
-  }
-
-  if (defects.length > 0) {
-    const highCount = defects.filter(d => d.severity === 'high').length
-    parts.push(`历史缺陷库中找到 ${defects.length} 条相似缺陷（其中高危 ${highCount} 条）`)
-  } else {
-    parts.push('历史缺陷库中未找到直接相似记录')
-  }
-
-  if (riskWordScore > 0.4) {
-    parts.push('案例描述中包含多个高风险业务关键词')
-  }
-
-  parts.push(`综合评分 ${score} 分，风险等级${level === 'high' ? '⚠️高危' : level === 'mid' ? '⚡中危' : '✅低危'}`)
-
-  return parts.join('；')
-}
-
-function buildCheckPoints(bizTypes, defects, score) {
-  const points = []
-
-  if (score >= 8) {
-    points.push('建议优先安排资深测试工程师执行此案例')
-    points.push('执行前请详细阅读关联历史缺陷的修复方案')
-  }
-
-  if (bizTypes.some(b => b.bizType === 'claims')) {
-    points.push('重点验证理赔金额计算精度与赔付限额')
-    points.push('确认受益人信息及理赔资料核验逻辑是否符合条款规定')
-  }
-
-  if (bizTypes.some(b => b.bizType === 'underwriting' || b.bizType === 'underwritingReview')) {
-    points.push('重点验证投保人资格校验及核保规则拦截逻辑')
-    points.push('检查健康告知问卷必填项及误告处理流程')
-  }
-
-  if (bizTypes.some(b => b.bizType === 'policyService')) {
-    points.push('重点验证减保、退保及保单贷款的额度和现金价值校验')
-    points.push('检查保单信息变更及资金流转接口的准确性')
-  }
-
-  if (bizTypes.some(b => b.bizType === 'systemBatch')) {
-    points.push('重点验证批量作业、定时任务及配置参数正确性')
-    points.push('检查跨系统数据同步及接口调用的异常处理与重试机制')
-  }
-
-  // 基于历史缺陷生成专项建议
-  const highDefects = defects.filter(d => d.severity === 'high')
-  if (highDefects.length > 0) {
-    points.push(`参考历史高危缺陷《${highDefects[0].title}》的修复方案进行针对性验证`)
-  }
-
-  if (points.length === 0) {
-    points.push('按标准测试流程执行，重点关注边界值和异常流')
-    points.push('验证完成后记录测试结果并更新案例执行状态')
-  }
-
-  return points.slice(0, 4)
 }
 
 /**
  * 批量评分（用于文件上传解析后）
  * @param {Array<{id, text}>} cases
- * @returns {Array} 评分结果，按风险分降序排列
+ * @returns {Promise<Array>} 评分结果，按风险分降序排列
  */
-function batchScoreCases(cases) {
-  const results = cases.map(c => scoreTestCase(c.text, c.id))
+async function batchScoreCases(cases) {
+  const results = []
+  for (const c of cases) {
+    const scored = await scoreTestCase(c.text, c.id)
+    results.push(scored)
+  }
   return results.sort((a, b) => b.riskScore - a.riskScore)
 }
 

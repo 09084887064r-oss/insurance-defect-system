@@ -87,6 +87,8 @@ export const dashboardApi = {
   moduleDistribution: (params) => api.get('/dashboard/module-distribution', { params }),
   rootCause: (params) => api.get('/dashboard/root-cause', { params }),
   productHealth: () => api.get('/dashboard/product-health'),
+  slaAging: (params) => api.get('/dashboard/sla-aging', { params }),
+  developerBacklog: (params) => api.get('/dashboard/developer-backlog', { params }),
 }
 
 // Reports
@@ -97,6 +99,19 @@ export const reportApi = {
 // Users
 export const userApi = {
   list: () => api.get('/users'),
+}
+
+// Cases
+export const caseApi = {
+  bizTemplates: () => api.get('/v1/cases/biz-templates'),
+  parse: (data) => api.post('/v1/cases/parse', data),
+  sessions: () => api.get('/v1/cases/sessions'),
+  list: (params) => api.get('/v1/cases', { params }),
+  get: (id) => api.get(`/v1/cases/${id}`),
+  submitFeedback: (id, data) => api.post(`/v1/cases/${id}/feedback`, data),
+  getDefectDbList: (params) => api.get('/v1/cases/defect-db/list', { params }),
+  audit: (id) => api.post(`/v1/cases/${id}/audit`),
+  feedbackStats: () => api.get('/v1/cases/feedback/stats')
 }
 
 export default api

@@ -33,7 +33,7 @@ router.get('/biz-templates', (req, res) => {
  * Body: { cases: [{id?, text}], filename?, session_id? }
  * 批量评分，返回排序后的结果
  */
-router.post('/parse', (req, res) => {
+router.post('/parse', async (req, res) => {
   try {
     const { cases, filename, session_id } = req.body
 
@@ -46,7 +46,7 @@ router.post('/parse', (req, res) => {
     }
 
     // 执行批量评分
-    const scored = batchScoreCases(cases.map((c, i) => ({
+    const scored = await batchScoreCases(cases.map((c, i) => ({
       id: c.id || `case_${i + 1}`,
       text: c.text || c.content || ''
     })))
@@ -57,13 +57,14 @@ router.post('/parse', (req, res) => {
     const insertCase = db.prepare(
       `INSERT INTO test_cases
         (uuid, session_id, case_index, case_text, biz_types, risk_score, risk_level, risk_label,
-         similar_defects, reason, check_points, upload_filename, created_by)
+         similar_defects, reason, check_points, upload_filename, status, created_by)
        VALUES
         (@uuid, @session_id, @case_index, @case_text, @biz_types, @risk_score, @risk_level, @risk_label,
-         @similar_defects, @reason, @check_points, @upload_filename, @created_by)`
+         @similar_defects, @reason, @check_points, @upload_filename, @status, @created_by)`
     )
 
     const savedCases = scored.map((result, idx) => {
+      const statusVal = result.riskScore >= 8.0 ? 'pending_audit' : 'completed'
       const r = insertCase.run({
         uuid: uuidv4(),
         session_id: sid,
@@ -77,9 +78,10 @@ router.post('/parse', (req, res) => {
         reason: result.reason,
         check_points: JSON.stringify(result.checkPoints),
         upload_filename: filename || null,
+        status: statusVal,
         created_by: req.user.id
       })
-      return { ...result, id: r.lastInsertRowid }
+      return { ...result, id: r.lastInsertRowid, status: statusVal }
     })
 
     const stats = {
@@ -157,6 +159,57 @@ router.get('/sessions', (req, res) => {
 })
 
 /**
+ * GET /api/v1/cases/feedback/stats
+ * 汇总反馈率和大模型各项评测指标大盘
+ */
+router.get('/feedback/stats', (req, res) => {
+  try {
+    const db = getDb()
+    const rows = db.prepare(`
+      SELECT feedback, COUNT(*) as count 
+      FROM test_cases 
+      WHERE feedback != 'none' 
+      GROUP BY feedback
+    `).all()
+
+    const stats = { hit: 0, false_alarm: 0, missed: 0, total: 0 }
+    for (const r of rows) {
+      stats[r.feedback] = r.count
+      stats.total += r.count
+    }
+
+    // 默认空指标兜底
+    let precision = 0
+    let recall = 0
+    let f1 = 0
+    let accuracy = 0
+
+    if (stats.total > 0) {
+      precision = (stats.hit + stats.false_alarm) > 0 ? (stats.hit / (stats.hit + stats.false_alarm)) : 0
+      recall = (stats.hit + stats.missed) > 0 ? (stats.hit / (stats.hit + stats.missed)) : 0
+      f1 = (precision + recall) > 0 ? (2 * precision * recall / (precision + recall)) : 0
+      accuracy = stats.hit / stats.total
+    }
+
+    res.json({
+      code: 200,
+      data: {
+        counts: stats,
+        metrics: {
+          precision: parseFloat((precision * 100).toFixed(1)),
+          recall: parseFloat((recall * 100).toFixed(1)),
+          f1Score: parseFloat((f1 * 100).toFixed(1)),
+          accuracy: parseFloat((accuracy * 100).toFixed(1))
+        }
+      }
+    })
+  } catch (err) {
+    console.error('[Feedback Stats] 统计获取失败:', err)
+    res.status(500).json({ code: 500, message: '指标统计失败', error: err.message })
+  }
+})
+
+/**
  * GET /api/v1/cases/:id
  */
 router.get('/:id', (req, res) => {
@@ -213,6 +266,30 @@ router.post('/:id/feedback', (req, res) => {
   } catch (err) {
     console.error('[Cases] 反馈提交失败:', err)
     res.status(500).json({ code: 500, message: '反馈提交失败', error: err.message })
+  }
+})
+
+/**
+ * POST /api/v1/cases/:id/audit
+ * 经理核准双签确认
+ */
+router.post('/:id/audit', (req, res) => {
+  try {
+    const { role } = req.user
+    if (role !== 'admin' && role !== 'manager') {
+      return res.status(403).json({ code: 403, message: '权限不足，仅允许项目经理及管理员进行双签核签' })
+    }
+
+    const db = getDb()
+    const result = db.prepare("UPDATE test_cases SET status = 'audited' WHERE id = ?").run(req.params.id)
+    if (result.changes === 0) {
+      return res.status(404).json({ code: 404, message: '未找到对应案例记录' })
+    }
+    db._flush()
+    res.json({ code: 200, message: '该高危测试用例已顺利通过双签核签！' })
+  } catch (err) {
+    console.error('[Cases Audit] 核签错误:', err)
+    res.status(500).json({ code: 500, message: '双签核签操作失败', error: err.message })
   }
 })
 

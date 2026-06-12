@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { Row, Col, Card, Spin, Select, Button, Tooltip, Tag } from 'antd'
-import { ReloadOutlined, WarningOutlined, BugOutlined, CheckCircleOutlined, RiseOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { Row, Col, Card, Spin, Select, Button, Tooltip } from 'antd'
+import { ReloadOutlined, WarningOutlined } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import { dashboardApi, versionApi } from '../services/api'
+import {
+  BugIcon, UnlockIcon, FatalIcon, WarningIcon,
+  TrendIcon, SuccessIcon, ClockIcon, ShieldIcon
+} from '../components/VectorIcons'
 
 const SEVERITY_COLORS = { fatal: '#dc2626', critical: '#ea580c', major: '#d97706', minor: '#65a30d' }
 const SEVERITY_LABELS = { fatal: '致命', critical: '严重', major: '一般', minor: '提示' }
@@ -18,8 +22,9 @@ export default function DashboardPage() {
   const [statusDist, setStatusDist] = useState([])
   const [trend, setTrend] = useState({ newTrend: [], closedTrend: [] })
   const [moduleDist, setModuleDist] = useState([])
-  const [rootCause, setRootCause] = useState([])
   const [productHealth, setProductHealth] = useState([])
+  const [slaAging, setSlaAging] = useState({ closed: [], open: [] })
+  const [developerBacklog, setDeveloperBacklog] = useState([])
   const [versions, setVersions] = useState([])
   const [versionId, setVersionId] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -33,22 +38,24 @@ export default function DashboardPage() {
     setLoading(true)
     const params = vid ? { version_id: vid } : {}
     try {
-      const [ov, sv, st, tr, md, rc, ph] = await Promise.all([
+      const [ov, sv, st, tr, md, ph, sla, bl] = await Promise.all([
         dashboardApi.overview(params),
         dashboardApi.severityDistribution(params),
         dashboardApi.statusDistribution(params),
         dashboardApi.trend(params),
         dashboardApi.moduleDistribution(params),
-        dashboardApi.rootCause(params),
         dashboardApi.productHealth(),
+        dashboardApi.slaAging(params),
+        dashboardApi.developerBacklog(params),
       ])
       setOverview(ov.data.data)
       setSeverityDist(sv.data.data)
       setStatusDist(st.data.data)
       setTrend(tr.data.data)
       setModuleDist(md.data.data)
-      setRootCause(rc.data.data)
       setProductHealth(ph.data.data)
+      setSlaAging(sla.data.data)
+      setDeveloperBacklog(bl.data.data)
     } finally {
       setLoading(false)
     }
@@ -73,115 +80,131 @@ export default function DashboardPage() {
           <div className="stat-label">{title}</div>
           {sub && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}
         </div>
-        <div style={{ fontSize: 28, opacity: 0.7 }}>{icon}</div>
+        <div style={{ display: 'flex', alignItems: 'center', height: '100%', opacity: 0.9 }}>{icon}</div>
       </div>
     </div>
   )
 
-  // Severity pie chart
+  // 1. Severity pie chart (Flat SAAS style)
+  const severityColors = { fatal: '#dc2626', critical: '#ea580c', major: '#3b82f6', minor: '#10b981' }
   const severityPieOption = {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { bottom: 0, textStyle: { color: '#94a3b8' } },
+    legend: { bottom: 0, textStyle: { color: 'var(--text-secondary)' } },
     series: [{
       type: 'pie', radius: ['45%', '70%'], center: ['50%', '44%'],
       label: { show: false },
-      emphasis: { scale: true, scaleSize: 8 },
+      itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 1.5 },
+      emphasis: { scale: true, scaleSize: 6 },
       data: severityDist.map(d => ({
         name: SEVERITY_LABELS[d.severity] || d.severity,
         value: d.count,
-        itemStyle: { color: SEVERITY_COLORS[d.severity] || '#64748b' }
+        itemStyle: { color: severityColors[d.severity] || '#64748b' }
       }))
     }]
   }
 
-  // Status bar chart
-  const statusBarOption = {
+  // 2. SLA Aging Pie (Flat SAAS style)
+  const slaPieOption = {
     backgroundColor: 'transparent',
-    tooltip: { trigger: 'axis' },
-    grid: { left: 16, right: 16, top: 16, bottom: 40, containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: statusDist.map(d => STATUS_LABELS[d.status] || d.status),
-      axisLabel: { color: '#94a3b8', fontSize: 11, rotate: 30 },
-      axisLine: { lineStyle: { color: '#2d2d42' } }
-    },
-    yAxis: { type: 'value', axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#2d2d42' } } },
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    legend: { bottom: 0, textStyle: { color: 'var(--text-secondary)' } },
     series: [{
-      type: 'bar', barMaxWidth: 36,
-      data: statusDist.map(d => d.count),
-      itemStyle: {
-        color: (params) => {
-          const colors = ['#6366f1','#3b82f6','#f59e0b','#10b981','#a78bfa','#64748b','#ef4444','#94a3b8']
-          return colors[params.dataIndex % colors.length]
-        },
-        borderRadius: [4, 4, 0, 0]
-      }
+      type: 'pie', radius: ['45%', '70%'], center: ['50%', '44%'],
+      label: { show: false },
+      itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 1.5 },
+      emphasis: { scale: true, scaleSize: 6 },
+      data: (slaAging.closed || []).map((d, i) => ({
+        name: d.name,
+        value: d.value,
+        itemStyle: { color: ['#10b981', '#06b6d4', '#3b82f6', '#8b5cf6'][i % 4] }
+      }))
     }]
   }
 
-  // Trend line chart
+  // 3. Developer Backlog Bar (Flat SAAS style)
+  const developerBacklogOption = {
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { top: 0, textStyle: { color: 'var(--text-secondary)' } },
+    grid: { left: 16, right: 24, top: 30, bottom: 16, containLabel: true },
+    xAxis: { type: 'value', axisLabel: { color: 'var(--text-secondary)' }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border)' } } },
+    yAxis: { type: 'category', data: developerBacklog.map(d => d.developer || '未指派'), axisLabel: { color: 'var(--text-secondary)', fontSize: 11 } },
+    series: [
+      {
+        name: '待修复总数',
+        type: 'bar',
+        barMaxWidth: 14,
+        data: developerBacklog.map(d => d.total),
+        itemStyle: {
+          color: '#3b82f6',
+          borderRadius: [0, 4, 4, 0]
+        }
+      },
+      {
+        name: '严重/致命',
+        type: 'bar',
+        barMaxWidth: 14,
+        data: developerBacklog.map(d => d.highSeverity),
+        itemStyle: {
+          color: '#ef4444',
+          borderRadius: [0, 4, 4, 0]
+        }
+      }
+    ]
+  }
+
+  // 4. Trend line chart (Flat SAAS style)
   const allDates = [...new Set([...trend.newTrend.map(d => d.date), ...trend.closedTrend.map(d => d.date)])].sort()
   const trendOption = {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis' },
-    legend: { top: 0, textStyle: { color: '#94a3b8' } },
+    legend: { top: 0, textStyle: { color: 'var(--text-secondary)' } },
     grid: { left: 16, right: 16, top: 40, bottom: 30, containLabel: true },
-    xAxis: { type: 'category', data: allDates, axisLabel: { color: '#94a3b8', fontSize: 10 }, axisLine: { lineStyle: { color: '#2d2d42' } } },
-    yAxis: { type: 'value', axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#2d2d42' } } },
+    xAxis: { type: 'category', data: allDates, axisLabel: { color: 'var(--text-secondary)', fontSize: 10 }, axisLine: { lineStyle: { color: 'var(--border)' } } },
+    yAxis: { type: 'value', axisLabel: { color: 'var(--text-secondary)' }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border)' } } },
     series: [
       {
         name: '新增缺陷', type: 'line', smooth: true,
         data: allDates.map(d => trend.newTrend.find(t => t.date === d)?.count || 0),
+        symbol: 'circle',
+        symbolSize: 6,
         itemStyle: { color: '#ef4444' },
-        areaStyle: { color: 'rgba(239,68,68,0.1)' },
-        lineStyle: { width: 2 }
+        lineStyle: { width: 3, color: '#ef4444' }
       },
       {
         name: '关闭缺陷', type: 'line', smooth: true,
         data: allDates.map(d => trend.closedTrend.find(t => t.date === d)?.count || 0),
+        symbol: 'circle',
+        symbolSize: 6,
         itemStyle: { color: '#10b981' },
-        areaStyle: { color: 'rgba(16,185,129,0.1)' },
-        lineStyle: { width: 2 }
+        lineStyle: { width: 3, color: '#10b981' }
       }
     ]
   }
 
-  // Module bar chart
+  // 5. Module bar chart (Flat SAAS style)
   const moduleOption = {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 16, right: 16, top: 16, bottom: 16, containLabel: true },
-    xAxis: { type: 'value', axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: '#2d2d42' } } },
-    yAxis: { type: 'category', data: moduleDist.map(d => d.module), axisLabel: { color: '#94a3b8', fontSize: 11 } },
+    xAxis: { type: 'value', axisLabel: { color: 'var(--text-secondary)' }, splitLine: { lineStyle: { type: 'dashed', color: 'var(--border)' } } },
+    yAxis: { type: 'category', data: moduleDist.map(d => d.module), axisLabel: { color: 'var(--text-secondary)', fontSize: 11 } },
     series: [
-      { name: '致命', type: 'bar', stack: 'total', barMaxWidth: 20, data: moduleDist.map(d => d.fatal), itemStyle: { color: '#dc2626', borderRadius: [0,0,0,0] } },
+      { name: '致命', type: 'bar', stack: 'total', barMaxWidth: 16, data: moduleDist.map(d => d.fatal), itemStyle: { color: '#dc2626' } },
       { name: '严重', type: 'bar', stack: 'total', data: moduleDist.map(d => d.critical), itemStyle: { color: '#ea580c' } },
-      { name: '其他', type: 'bar', stack: 'total', data: moduleDist.map(d => d.total - d.fatal - d.critical), itemStyle: { color: '#4f46e5', borderRadius: [0,4,4,0] } },
+      { name: '其他', type: 'bar', stack: 'total', data: moduleDist.map(d => d.total - d.fatal - d.critical), itemStyle: { color: '#3b82f6', borderRadius: [0, 4, 4, 0] } },
     ]
   }
 
-  // Root cause pie
-  const rootCauseOption = {
-    backgroundColor: 'transparent',
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    series: [{
-      type: 'pie', radius: '65%',
-      label: { color: '#94a3b8', fontSize: 11 },
-      data: rootCause.map((d, i) => ({
-        name: d.category, value: d.count,
-        itemStyle: { color: ['#4f46e5','#7c3aed','#0891b2','#059669','#d97706','#dc2626','#64748b'][i % 7] }
-      }))
-    }]
-  }
 
   return (
     <div className="page-container fade-in-up">
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">📊 数据仪表盘</h1>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>实时缺陷质量监控与分析</div>
+          <h1 className="page-title">📊 产品测试缺陷预警系统 - 实时质量监控大屏</h1>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>实时缺陷质量监控与交付跟踪</div>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <Select
@@ -200,56 +223,54 @@ export default function DashboardPage() {
       {/* Active alerts banner */}
       {overview?.activeAlerts > 0 && (
         <div style={{
-          background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)',
+          background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)',
           borderRadius: 10, padding: '12px 16px', marginBottom: 24,
           display: 'flex', alignItems: 'center', gap: 12
         }}>
           <WarningOutlined style={{ color: '#ef4444', fontSize: 18 }} className="alert-pulse" />
-          <span style={{ color: '#fca5a5', fontWeight: 600 }}>
+          <span style={{ color: '#dc2626', fontWeight: 600 }}>
             当前有 {overview.activeAlerts} 个活跃预警未处理！请及时关注缺陷质量风险。
           </span>
-          <Button size="small" danger ghost style={{ marginLeft: 'auto' }}>查看预警</Button>
         </div>
       )}
 
       {/* Overview Stats */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={4}>
-          <StatCard title="缺陷总数" value={overview?.total} icon="🐛" color="var(--text-primary)" className="accent" />
+          <StatCard title="缺陷总数" value={overview?.total} icon={<BugIcon color="var(--accent)" size={28} />} color="var(--text-primary)" className="accent" />
         </Col>
         <Col xs={24} sm={12} lg={4}>
-          <StatCard title="未关闭缺陷" value={overview?.open} icon="🔓" color="#f59e0b" className="warning" />
+          <StatCard title="未关闭缺陷" value={overview?.open} icon={<UnlockIcon color="#f59e0b" size={28} />} color="#f59e0b" className="warning" />
         </Col>
         <Col xs={24} sm={12} lg={4}>
-          <StatCard title="致命缺陷" value={overview?.fatal} icon="💀" color="#ef4444" className="danger" />
+          <StatCard title="致命缺陷" value={overview?.fatal} icon={<FatalIcon color="#ef4444" size={28} />} color="#ef4444" className="danger" />
         </Col>
         <Col xs={24} sm={12} lg={4}>
-          <StatCard title="严重缺陷" value={overview?.critical} icon="⚠️" color="#ea580c" className="danger" />
+          <StatCard title="严重缺陷" value={overview?.critical} icon={<WarningIcon color="#ea580c" size={28} />} color="#ea580c" className="danger" />
         </Col>
         <Col xs={24} sm={12} lg={4}>
-          <StatCard title="本周新增" value={overview?.weekNew} icon="📈" color="#3b82f6" className="info"
-            sub="过去7天" />
+          <StatCard title="本周新增" value={overview?.weekNew} icon={<TrendIcon color="#3b82f6" size={28} />} color="#3b82f6" className="info" sub="过去7天" />
         </Col>
         <Col xs={24} sm={12} lg={4}>
-          <StatCard title="关闭率" value={`${overview?.closeRate}%`} icon="✅" color="#10b981" className="success" />
+          <StatCard title="关闭率" value={`${overview?.closeRate}%`} icon={<SuccessIcon color="#10b981" size={28} />} color="#10b981" className="success" />
         </Col>
       </Row>
 
       {/* Charts Row 1 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={8}>
-          <Card title="缺陷严重度分布" style={{ height: 340 }}>
+          <Card title="缺陷严重度分布（实时）" style={{ height: 340 }}>
             <ReactECharts option={severityPieOption} style={{ height: 260 }} />
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title="缺陷状态分布" style={{ height: 340 }}>
-            <ReactECharts option={statusBarOption} style={{ height: 260 }} />
+          <Card title="缺陷修复时效 SLA (已关闭)" style={{ height: 340 }}>
+            <ReactECharts option={slaPieOption} style={{ height: 260 }} />
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title="根因分析" style={{ height: 340 }}>
-            <ReactECharts option={rootCauseOption} style={{ height: 260 }} />
+          <Card title="开发待办缺陷 Top 排行" style={{ height: 340 }}>
+            <ReactECharts option={developerBacklogOption} style={{ height: 260 }} />
           </Card>
         </Col>
       </Row>
@@ -257,7 +278,7 @@ export default function DashboardPage() {
       {/* Charts Row 2 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={14}>
-          <Card title="近30天缺陷趋势" style={{ height: 320 }}>
+          <Card title="近30天缺陷收敛趋势" style={{ height: 320 }}>
             <ReactECharts option={trendOption} style={{ height: 240 }} />
           </Card>
         </Col>
@@ -269,7 +290,7 @@ export default function DashboardPage() {
       </Row>
 
       {/* Product Health */}
-      <Card title="🏥 产品健康度评分" style={{ marginBottom: 16 }}>
+      <Card title="🏥 产品健康度评分（实时）" style={{ marginBottom: 16 }}>
         <Row gutter={[16, 16]}>
           {productHealth.map(p => (
             <Col key={p.id} xs={24} sm={12} lg={8}>
