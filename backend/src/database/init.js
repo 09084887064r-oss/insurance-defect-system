@@ -156,6 +156,13 @@ async function initDatabase() {
     created_at TEXT DEFAULT (datetime('now','localtime'))
   )`)
 
+  // ── 新增：缺陷嵌入向量表 ──────────────────────────────
+  _db.exec(`CREATE TABLE IF NOT EXISTS defect_embeddings (
+    defect_id TEXT PRIMARY KEY,
+    vector_json TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+  )`)
+
   // 插入演示数据
   await seedDatabase(_db)
   _db._flush()

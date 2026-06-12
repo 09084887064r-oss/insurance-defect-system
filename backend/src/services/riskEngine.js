@@ -75,63 +75,19 @@ function calcRiskWordScore(caseText, bizTypes) {
 /**
  * 从历史缺陷库中检索相似缺陷（Top-5）
  */
-function retrieveSimilarDefects(caseText, bizTypes, limit = 5) {
-  const db = getDb()
+async function retrieveSimilarDefects(caseText, bizTypes, limit = 5) {
   const primaryBizType = bizTypes.length ? bizTypes[0].bizType : null
-
-  let defects = []
-
-  if (primaryBizType) {
-    // 按业务类型检索
-    defects = db.prepare(`
-      SELECT * FROM defect_db
-      WHERE biz_type = ?
-      ORDER BY CASE severity WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END
-      LIMIT ?
-    `).all(primaryBizType, limit * 2)
+  try {
+    const defects = await searchSimilarDefects(caseText, primaryBizType, limit)
+    return defects
+  } catch (err) {
+    console.error('[retrieveSimilarDefects] 语义检索匹配失败，返回空数组兜底:', err)
+    return []
   }
-
-  if (defects.length < limit) {
-    // 补充：关键词全文匹配
-    const words = caseText
-      .replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ')
-      .split(/\s+/)
-      .filter(w => w.length >= 2)
-      .slice(0, 5)
-
-    for (const word of words) {
-      if (defects.length >= limit * 2) break
-      const extra = db.prepare(`
-        SELECT * FROM defect_db
-        WHERE (title LIKE ? OR description LIKE ? OR fix_summary LIKE ?)
-        AND id NOT IN (${defects.map(() => '?').join(',') || '0'})
-        LIMIT 3
-      `).all(`%${word}%`, `%${word}%`, `%${word}%`, ...defects.map(d => d.id))
-      defects.push(...extra)
-    }
-  }
-
-  // 关键词相关性二次排序
-  const caseWords = new Set(
-    caseText.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ' ').split(/\s+/).filter(w => w.length >= 2)
-  )
-
-  return defects
-    .map(d => {
-      const titleWords = d.title.split('')
-      const matchCount = [...caseWords].filter(w => d.title.includes(w) || d.description?.includes(w)).length
-      return { ...d, _matchScore: matchCount }
-    })
-    .sort((a, b) => {
-      if (b.severity !== a.severity) {
-        return (SEVERITY_SCORE[b.severity] || 0) - (SEVERITY_SCORE[a.severity] || 0)
-      }
-      return b._matchScore - a._matchScore
-    })
-    .slice(0, limit)
 }
 
 const { callLLM, maskSensitiveData } = require('./llmService')
+const { searchSimilarDefects } = require('./vectorSearchService')
 
 /**
  * 核心评分函数：对单条测试案例进行风险评分
@@ -157,7 +113,7 @@ async function scoreTestCase(caseText, caseId = null) {
   const bizTypes = detectBizTypes(maskedText)
 
   // 2. 历史缺陷检索
-  const similarDefects = retrieveSimilarDefects(maskedText, bizTypes)
+  const similarDefects = await retrieveSimilarDefects(maskedText, bizTypes)
 
   // 3. 大模型风险评分与智能排序引擎 (基于Qwen大模型或语义规则引擎)
   const llmResult = await callLLM(maskedText, similarDefects)
