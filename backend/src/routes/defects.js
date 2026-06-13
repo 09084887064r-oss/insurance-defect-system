@@ -164,4 +164,114 @@ router.post('/:id/comments', (req, res) => {
   res.status(201).json({ success: true, data: comment });
 });
 
+// POST /api/defects/check-duplicate
+router.post('/check-duplicate', (req, res) => {
+  const { title, description, version_id } = req.body;
+  if (!title) return res.status(400).json({ success: false, message: '标题不能为空' });
+
+  const db = getDb();
+  try {
+    const duplicates = findDuplicateDefects(db, title, description, version_id);
+    res.json({ success: true, data: duplicates });
+  } catch (err) {
+    console.error('[Defect Duplicate Check] 失败:', err);
+    res.status(500).json({ success: false, message: '查重失败', error: err.message });
+  }
+});
+
+const { tokenize } = require('../services/vectorSearchService');
+
+function findDuplicateDefects(db, title, description, versionId, limit = 5) {
+  const queryText = `${title} ${description || ''}`;
+  const queryTokens = tokenize(queryText);
+  if (queryTokens.length === 0) return [];
+
+  // 获取系统中所有已记录缺陷
+  const defects = db.prepare(`
+    SELECT d.id, d.title, d.severity, d.status, d.module, d.description, tv.version as version_name, p.name as product_name
+    FROM defects d
+    JOIN test_versions tv ON d.version_id = tv.id
+    JOIN products p ON tv.product_id = p.id
+  `).all();
+
+  if (defects.length === 0) return [];
+
+  const docCount = defects.length;
+  const docTerms = [];
+  const docFreqs = new Map();
+
+  for (const d of defects) {
+    const docText = `${d.title} ${d.description || ''} ${d.module || ''}`;
+    const tokens = tokenize(docText);
+    const tfMap = new Map();
+    for (const t of tokens) {
+      tfMap.set(t, (tfMap.get(t) || 0) + 1);
+    }
+    docTerms.push({ defect: d, tf: tfMap, length: tokens.length });
+    for (const term of tfMap.keys()) {
+      docFreqs.set(term, (docFreqs.get(term) || 0) + 1);
+    }
+  }
+
+  // 计算 IDF
+  const idfMap = new Map();
+  for (const [term, df] of docFreqs.entries()) {
+    idfMap.set(term, Math.log(1 + docCount / df));
+  }
+
+  // 构建查询向量
+  const queryTF = new Map();
+  for (const t of queryTokens) {
+    queryTF.set(t, (queryTF.get(t) || 0) + 1);
+  }
+  const queryVector = new Map();
+  for (const [term, tfVal] of queryTF.entries()) {
+    const tf = tfVal / queryTokens.length;
+    const idf = idfMap.get(term) || 0;
+    queryVector.set(term, tf * idf);
+  }
+
+  // 对所有记录计算 Cosine 相似度
+  const scored = [];
+  for (const dt of docTerms) {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+
+    const docVector = new Map();
+    for (const [term, tfVal] of dt.tf.entries()) {
+      const tf = tfVal / dt.length;
+      const idf = idfMap.get(term) || 0;
+      docVector.set(term, tf * idf);
+    }
+
+    for (const [term, valA] of queryVector.entries()) {
+      normA += valA * valA;
+      if (docVector.has(term)) {
+        dotProduct += valA * docVector.get(term);
+      }
+    }
+    for (const valB of docVector.values()) {
+      normB += valB * valB;
+    }
+
+    const similarity = (normA === 0 || normB === 0) ? 0 : dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+    
+    // 仅召回相似度在 30% 以上的缺陷记录，代表存在重叠嫌疑
+    if (similarity >= 0.30) {
+      scored.push({
+        id: dt.defect.id,
+        title: dt.defect.title,
+        severity: dt.defect.severity,
+        status: dt.defect.status,
+        version_name: dt.defect.version_name,
+        product_name: dt.defect.product_name,
+        score: Math.round(similarity * 100)
+      });
+    }
+  }
+
+  return scored.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
 module.exports = router;

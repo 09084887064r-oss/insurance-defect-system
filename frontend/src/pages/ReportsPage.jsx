@@ -45,6 +45,19 @@ export default function ReportsPage() {
     ws.addRow(['保险产品UAT测试报告'])
     ws.addRow([`产品：${report.version.product_name}`, `版本：${report.version.version}`, `生成时间：${report.generatedAt?.substring(0, 19)}`])
     ws.addRow([])
+
+    if (report.aiAnalysis) {
+      ws.addRow(['🧠 AI UAT 质量根因诊断'])
+      ws.addRow(['现状诊断', report.aiAnalysis.summaryDiagnosis])
+      ws.addRow(['根因分析', report.aiAnalysis.rootCauseAnalysis])
+      ws.addRow([])
+      ws.addRow(['🎯 研发过程纠偏建议'])
+      report.aiAnalysis.correctiveSuggestions.forEach((s, idx) => {
+        ws.addRow([`建议 ${idx + 1}`, s])
+      })
+      ws.addRow([])
+    }
+
     ws.addRow(['缺陷统计'])
     ws.addRow(['总数', '致命', '严重', '一般', '提示', '关闭数', '关闭率'])
     const s = report.summary
@@ -71,9 +84,37 @@ export default function ReportsPage() {
     doc.text(`产品：${report.version.product_name}  |  版本：${report.version.version}`, 14, 30)
     doc.text(`生成时间：${report.generatedAt?.substring(0, 19)}`, 14, 37)
 
+    let currentY = 42
+
+    if (report.aiAnalysis) {
+      doc.setFontSize(11)
+      doc.text(`【AI UAT 质量根因诊断与建议】`, 14, currentY)
+      doc.setFontSize(9)
+
+      const diagText = `质量评估：${report.aiAnalysis.summaryDiagnosis}`
+      const splitDiag = doc.splitTextToSize(diagText, 180)
+      doc.text(splitDiag, 14, currentY + 6)
+      currentY += 6 + splitDiag.length * 4 + 2
+
+      const causeText = `根因分析：${report.aiAnalysis.rootCauseAnalysis}`
+      const splitCause = doc.splitTextToSize(causeText, 180)
+      doc.text(splitCause, 14, currentY)
+      currentY += splitCause.length * 4 + 3
+
+      doc.text(`研发建议：`, 14, currentY)
+      currentY += 5
+      report.aiAnalysis.correctiveSuggestions.forEach((s, idx) => {
+        const suggText = `${idx + 1}. ${s}`
+        const splitSugg = doc.splitTextToSize(suggText, 175)
+        doc.text(splitSugg, 18, currentY)
+        currentY += splitSugg.length * 4 + 1
+      })
+      currentY += 5
+    }
+
     const s = report.summary
     autoTable(doc, {
-      startY: 45,
+      startY: currentY,
       head: [['总缺陷', '致命', '严重', '一般', '提示', '关闭数', '关闭率']],
       body: [[s.total, s.fatal, s.critical, s.major, s.minor, s.closed, `${report.closeRate}%`]],
     })
@@ -159,6 +200,103 @@ export default function ReportsPage() {
               </div>
             ))}
           </div>
+
+          {/* AI UAT Quality Diagnosis Card */}
+          {report.aiAnalysis && (
+            <Card
+              style={{
+                marginBottom: 16,
+                background: 'linear-gradient(135deg, var(--bg-secondary), var(--bg-elevated))',
+                border: '1px solid rgba(99, 102, 241, 0.25)',
+                borderRadius: 12,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+              }}
+              title={
+                <span style={{ color: 'var(--text-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>🧠</span> AI UAT 质量根因诊断与过程纠偏建议
+                </span>
+              }
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 24 }}>
+                {/* Left side: Diagnosis */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <h3 style={{ fontSize: 13, fontWeight: 700, color: '#f43f5e', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      🚨 质量现状评估
+                    </h3>
+                    <div style={{
+                      background: 'rgba(244, 63, 94, 0.05)',
+                      borderLeft: '4px solid #f43f5e',
+                      padding: '10px 14px',
+                      borderRadius: '0 8px 8px 0',
+                      color: 'var(--text-secondary)',
+                      fontSize: 12.5,
+                      lineHeight: '1.6'
+                    }}>
+                      {report.aiAnalysis.summaryDiagnosis}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      🔍 缺陷核心根因分析
+                    </h3>
+                    <div style={{
+                      background: 'rgba(245, 158, 11, 0.05)',
+                      borderLeft: '4px solid #f59e0b',
+                      padding: '10px 14px',
+                      borderRadius: '0 8px 8px 0',
+                      color: 'var(--text-secondary)',
+                      fontSize: 12.5,
+                      lineHeight: '1.6'
+                    }}>
+                      {report.aiAnalysis.rootCauseAnalysis}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right side: Suggestions */}
+                <div>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                    🎯 研发过程纠偏建议 (下个版本建议)
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {report.aiAnalysis.correctiveSuggestions.map((s, idx) => (
+                      <div key={idx} style={{
+                        display: 'flex',
+                        gap: 10,
+                        alignItems: 'flex-start',
+                        background: 'rgba(16, 185, 129, 0.03)',
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        border: '1px solid rgba(16, 185, 129, 0.08)'
+                      }}>
+                        <span style={{
+                          background: '#10b981',
+                          color: '#fff',
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 10,
+                          fontWeight: 'bold',
+                          flexShrink: 0,
+                          marginTop: 2
+                        }}>
+                          {idx + 1}
+                        </span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 12, lineHeight: '1.5' }}>
+                          {s}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             {/* By module chart */}

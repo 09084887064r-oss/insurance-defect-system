@@ -58,6 +58,7 @@ export const defectApi = {
   changeStatus: (id, data) => api.post(`/defects/${id}/status`, data),
   assign: (id, data) => api.post(`/defects/${id}/assign`, data),
   addComment: (id, data) => api.post(`/defects/${id}/comments`, data),
+  checkDuplicate: (data) => api.post('/defects/check-duplicate', data),
 }
 
 // Alerts

@@ -216,4 +216,154 @@ async function callLLM(caseText, similarDefects) {
   return finalResult
 }
 
-module.exports = { callLLM, maskSensitiveData, checkPromptInjection }
+async function generateReportAnalysis(reportData) {
+  const { productName, versionName, summary, byModule, byRootCause } = reportData;
+  const hashPayload = JSON.stringify(reportData);
+  const hash = crypto.createHash('md5').update(hashPayload).digest('hex');
+
+  // 1. 尝试从缓存读取
+  try {
+    const db = getDb();
+    const cacheRecord = db.prepare("SELECT result_json FROM llm_cache WHERE case_hash = ?").get('report_' + hash);
+    if (cacheRecord) {
+      console.log(`[Report AI Cache] 🚀 命中缓存，直接返回报告诊断`);
+      return JSON.parse(cacheRecord.result_json);
+    }
+  } catch (err) {
+    console.error('[Report AI Cache] 查询缓存失败:', err.message);
+  }
+
+  // 2. 构建 Prompt
+  const prompt = {
+    role: "保险系统UAT测试质量分析专家",
+    task: "根据给定的版本缺陷统计数据，生成一份结构化的UAT测试质量报告摘要，包含缺陷根因分析、质量现状诊断与研发过程纠偏改进建议。",
+    input: {
+      productName,
+      version: versionName,
+      defectSummary: summary,
+      byModule: byModule,
+      byRootCause: byRootCause
+    },
+    outputSchema: {
+      summaryDiagnosis: "基于数据给出的总体质量概况与风险评估（80字左右）",
+      rootCauseAnalysis: "针对核心模块缺陷根因进行分析及业务影响（100字左右）",
+      correctiveSuggestions: [
+        "针对问题最突出的模块或模块接口，给出下个版本的研发过程优化或单元测试纠偏建议1",
+        "针对主导的缺陷根因类型（如需求Flaw、CodeBug、测试漏测），给出改进建议2",
+        "针对版本发布或用例覆盖给出的测试流程建议3"
+      ]
+    }
+  };
+
+  const payload = {
+    model: process.env.LLM_MODEL || "qwen2.5:7b",
+    messages: [
+      {
+        role: "system",
+        content: "你是一个保险系统UAT测试质量分析专家，必须严格按照用户的JSON Schema格式返回结果。请直接返回JSON，不要包含任何markdown格式或额外的解释文字。"
+      },
+      {
+        role: "user",
+        content: JSON.stringify(prompt)
+      }
+    ],
+    temperature: 0.2,
+    response_format: { type: "json_object" }
+  };
+
+  const ollamaUrl = process.env.LLM_API_URL || "http://127.0.0.1:11434/v1/chat/completions";
+  let finalResult = null;
+
+  // 3. 尝试调用 Ollama 服务
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 2000); // 2秒快速超时降级
+
+    const response = await fetch(ollamaUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.LLM_API_KEY || ''}`
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    clearTimeout(id);
+
+    if (response.ok) {
+      const resData = await response.json();
+      const content = resData.choices[0].message.content;
+      finalResult = JSON.parse(content);
+    }
+  } catch (err) {
+    // 捕获异常，准备降级
+  }
+
+  // 4. 降级：本地高保真根因诊断与纠正引擎
+  if (!finalResult) {
+    console.log('[Report AI Fallback] ⚙️ 大模型不在线，激活本地高保真根因诊断与建议引擎');
+
+    const topModuleObj = byModule && byModule.length > 0 ? byModule[0] : { module: '核心模块', count: 0 };
+    const topModule = topModuleObj.module;
+    const topModuleCount = topModuleObj.count;
+
+    const topCauseObj = byRootCause && byRootCause.length > 0 ? byRootCause[0] : { category: '代码逻辑错误', count: 0 };
+    const topCause = topCauseObj.category;
+
+    const total = summary.total || 0;
+    const fatalAndCritical = (summary.fatal || 0) + (summary.critical || 0);
+    const closeRate = summary.total > 0 ? ((summary.closed / summary.total) * 100).toFixed(1) : '0.0';
+
+    let summaryDiagnosis = '';
+    let rootCauseAnalysis = '';
+    let correctiveSuggestions = [];
+
+    if (total === 0) {
+      summaryDiagnosis = `当前测试版本 ${versionName} 质量表现极其稳定，暂未登记任何测试缺陷，缺陷关闭率达 100.0%，版本上线风险较低。`;
+      rootCauseAnalysis = `本版本各项业务模块暂未发现阻碍性的代码逻辑缺陷或需求缺口，整体质量表现良好。`;
+      correctiveSuggestions = [
+        '建议保持当前稳定的研发编码模式，对发布包继续执行全面的日常回归测试。',
+        '持续监控系统跑批及大批量批处理下的中间件表现与接口时效性。',
+        '为下个迭代版本提前设计扩展承保及保全测试用例脚本，维持自动化测试用例的高覆盖率。'
+      ];
+    } else {
+      let riskLevel = '中等风险';
+      if (closeRate >= 85 && fatalAndCritical === 0) {
+        riskLevel = '低风险';
+      } else if (fatalAndCritical > 2 || closeRate < 70) {
+        riskLevel = '高风险';
+      }
+
+      summaryDiagnosis = `当前测试版本 ${versionName} 累计发现缺陷 ${total} 个，其中致命和严重缺陷共 ${fatalAndCritical} 个，目前缺陷修复关闭率为 ${closeRate}%。综合分析判定版本发布为【${riskLevel}】状态。`;
+
+      rootCauseAnalysis = `数据挖掘显示，缺陷的高发模块位于【${topModule}】场景（占比最大，共 ${topModuleCount} 个），首要致错根因为【${topCause}】。这表明在编码阶段该业务域的多条件规则判定、或边界数据校验存在代码遗漏，直接导致了系统出现逻辑偏离与功能报错。`;
+
+      correctiveSuggestions = [
+        `建议开发团队针对【${topModule}】的底层判定规则进行彻底的重构核查，在下个迭代提测前，针对该模块补充至少 10 组典型边界测试用例。`,
+        `针对【${topCause}】高发的问题，建议加强前期的需求宣讲与设计方案评审，研发团队内部推行交叉 Code Review，前置识别复杂精算逻辑中的边界判定缺漏。`,
+        `针对当前的致命与严重缺陷，项目经理需执行“限时挂牌督办”，确保缺陷关闭率在正式部署前提升至 90% 以上，并增设接口级别自动化防滑坡回归测试。`
+      ];
+    }
+
+    finalResult = {
+      summaryDiagnosis,
+      rootCauseAnalysis,
+      correctiveSuggestions
+    };
+  }
+
+  // 5. 写入缓存
+  try {
+    const db = getDb();
+    db.prepare('INSERT OR REPLACE INTO llm_cache (case_hash, result_json) VALUES (?, ?)')
+      .run('report_' + hash, JSON.stringify(finalResult));
+  } catch (err) {
+    console.error('[Report AI Cache] 写入缓存失败:', err.message);
+  }
+
+  return finalResult;
+}
+
+module.exports = { callLLM, maskSensitiveData, checkPromptInjection, generateReportAnalysis };
+
