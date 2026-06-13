@@ -9,10 +9,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Dynamically resolve project directory using script path to avoid encoding issues
+# Use English names for folders to avoid encoding issues on Chinese locales
 $ProjectDir = $PSScriptRoot
 $ParentDir  = Split-Path $ProjectDir -Parent
-$BackupDir  = Join-Path $ParentDir "项目备份"
+$BackupDir  = Join-Path $ParentDir "backups"
 
 Write-Host ""
 Write-Host "=================================================" -ForegroundColor Cyan
@@ -21,6 +21,11 @@ Write-Host "=================================================" -ForegroundColor 
 Write-Host ""
 
 Set-Location $ProjectDir
+
+# Create backup dir if not exists
+if (-not (Test-Path $BackupDir)) {
+    New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
+}
 
 # -- Step 1: Git commit --
 $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("PATH","User")
